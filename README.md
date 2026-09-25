@@ -1,6 +1,6 @@
 # Gym Master – Back-End
 
-Back-End cho dự án SWP391 Gym Master (Spring Boot 4, Java 21, SQL Server).
+Back-End cho dự án SWP391 Gym Master (Spring Boot 4, Java 21, MySQL 8).
 
 Repo này được gộp từ 2 repo cá nhân, **giữ nguyên lịch sử commit**:
 - [SWP391_BE](https://github.com/huynhhuuphuocpro9-sketch/SWP391_BE): đăng ký, đăng nhập, JWT, phân quyền
@@ -8,14 +8,13 @@ Repo này được gộp từ 2 repo cá nhân, **giữ nguyên lịch sử comm
 
 ## Cần cài
 - JDK 21
-- SQL Server 2022 Express + SSMS (bật Mixed Mode, bật TCP/IP cổng 1433)
+- MySQL Server 8 (MySQL Community Server) + MySQL Workbench để xem dữ liệu. Ghi nhớ mật khẩu `root` đặt lúc cài.
 
 ## Chạy dự án
-1. Trong SSMS tạo database: `CREATE DATABASE swp391_group3;`
-2. Nếu mật khẩu `sa` trên máy bạn khác `123`, đặt biến môi trường `DB_PASSWORD` (hoặc sửa tạm trong `application.properties`, **đừng commit mật khẩu thật**).
-3. Chạy `Swp391BeApplication` (hoặc `mvnw spring-boot:run`). Các bảng sẽ được tự động tạo.
-4. Mở http://localhost:8080/api/test, thấy `Backend is running!` là thành công.
-5. Nạp dữ liệu mẫu trong SSMS, theo thứ tự:
+1. Nếu mật khẩu `root` trên máy bạn khác `123`, đặt biến môi trường `DB_PASSWORD` (hoặc sửa tạm trong `application.properties`, **đừng commit mật khẩu thật**).
+2. Chạy `Swp391BeApplication` (hoặc `mvnw spring-boot:run`). Database `swp391_group3` và các bảng sẽ được tự động tạo.
+3. Mở http://localhost:8080/api/test, thấy `Backend is running!` là thành công.
+4. Nạp dữ liệu mẫu trong MySQL Workbench (File → Open SQL Script → bấm ⚡ Execute), theo thứ tự:
    - `sql/seed-users.sql`: 4 tài khoản (mật khẩu `password123`)
    - `sql/seed-catalog.sql`: gói tập, phòng, lớp, lịch mẫu
 

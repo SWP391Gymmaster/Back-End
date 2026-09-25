@@ -1,30 +1,14 @@
--- Run after the application has created the users table in swp391_group3.
--- Demo password for all four accounts: password123
--- The value below is a BCrypt hash (cost 12), compatible with BCryptPasswordEncoder.
+-- MySQL. Chay SAU khi ung dung da chay it nhat 1 lan (de tu tao bang users).
+-- Mat khau demo cua ca 4 tai khoan: password123 (BCrypt hash, tuong thich BCryptPasswordEncoder)
+-- INSERT IGNORE: bo qua neu email / user_name da ton tai (bang users co rang buoc unique).
 USE swp391_group3;
-GO
 
-BEGIN TRANSACTION;
-
-IF NOT EXISTS (SELECT 1 FROM users WHERE email = 'manager@example.com' OR user_name = 'manager1')
-    INSERT INTO users (user_name, full_name, email, password_hash, phone, role)
-    VALUES ('manager1', 'Demo Manager', 'manager@example.com',
-            '$2a$12$AQBLfBFPxUBLiV9PkiEGL.hvDSMKSUHsS3/pefc/SXsM4fGDHFuai', '0900000001', 'MANAGER');
-
-IF NOT EXISTS (SELECT 1 FROM users WHERE email = 'coach@example.com' OR user_name = 'coach1')
-    INSERT INTO users (user_name, full_name, email, password_hash, phone, role)
-    VALUES ('coach1', 'Demo Coach', 'coach@example.com',
-            '$2a$12$AQBLfBFPxUBLiV9PkiEGL.hvDSMKSUHsS3/pefc/SXsM4fGDHFuai', '0900000002', 'COACH');
-
-IF NOT EXISTS (SELECT 1 FROM users WHERE email = 'member@example.com' OR user_name = 'member1')
-    INSERT INTO users (user_name, full_name, email, password_hash, phone, role)
-    VALUES ('member1', 'Demo Member', 'member@example.com',
-            '$2a$12$AQBLfBFPxUBLiV9PkiEGL.hvDSMKSUHsS3/pefc/SXsM4fGDHFuai', '0900000003', 'MEMBER');
-
-IF NOT EXISTS (SELECT 1 FROM users WHERE email = 'receptionist@example.com' OR user_name = 'receptionist1')
-    INSERT INTO users (user_name, full_name, email, password_hash, phone, role)
-    VALUES ('receptionist1', 'Demo Receptionist', 'receptionist@example.com',
-            '$2a$12$AQBLfBFPxUBLiV9PkiEGL.hvDSMKSUHsS3/pefc/SXsM4fGDHFuai', '0900000004', 'RECEPTIONIST');
-
-COMMIT TRANSACTION;
-GO
+INSERT IGNORE INTO users (user_name, full_name, email, password_hash, phone, role) VALUES
+('manager1',      'Demo Manager',      'manager@example.com',
+ '$2a$12$AQBLfBFPxUBLiV9PkiEGL.hvDSMKSUHsS3/pefc/SXsM4fGDHFuai', '0900000001', 'MANAGER'),
+('coach1',        'Demo Coach',        'coach@example.com',
+ '$2a$12$AQBLfBFPxUBLiV9PkiEGL.hvDSMKSUHsS3/pefc/SXsM4fGDHFuai', '0900000002', 'COACH'),
+('member1',       'Demo Member',       'member@example.com',
+ '$2a$12$AQBLfBFPxUBLiV9PkiEGL.hvDSMKSUHsS3/pefc/SXsM4fGDHFuai', '0900000003', 'MEMBER'),
+('receptionist1', 'Demo Receptionist', 'receptionist@example.com',
+ '$2a$12$AQBLfBFPxUBLiV9PkiEGL.hvDSMKSUHsS3/pefc/SXsM4fGDHFuai', '0900000004', 'RECEPTIONIST');
