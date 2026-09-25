@@ -1,7 +1,7 @@
--- Run after the application has created the users table in swp391_gym.
+-- Run after the application has created the users table in swp391_group3.
 -- Demo password for all four accounts: password123
 -- The value below is a BCrypt hash (cost 12), compatible with BCryptPasswordEncoder.
-USE swp391_gym;
+USE swp391_group3;
 GO
 
 BEGIN TRANSACTION;

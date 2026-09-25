@@ -1,6 +1,6 @@
-package com.sportscenter.repository;
+package com.swp391_be.repository;
 
-import com.sportscenter.entity.Room;
+import com.swp391_be.entity.Room;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface RoomRepository extends JpaRepository<Room, Long> {

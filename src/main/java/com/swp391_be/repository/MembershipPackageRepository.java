@@ -1,6 +1,6 @@
-package com.sportscenter.repository;
+package com.swp391_be.repository;
 
-import com.sportscenter.entity.MembershipPackage;
+import com.swp391_be.entity.MembershipPackage;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface MembershipPackageRepository

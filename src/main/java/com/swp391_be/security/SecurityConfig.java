@@ -1,5 +1,12 @@
 package com.swp391_be.security;
 
+import java.util.List;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpMethod;
+import org.springframework.security.config.Customizer;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import com.swp391_be.service.CustomUserDetailsService;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
@@ -40,10 +47,18 @@ public class SecurityConfig {
     }
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http, DaoAuthenticationProvider provider) throws Exception {
-        http.csrf(csrf -> csrf.disable())
+        http.cors(Customizer.withDefaults())
+                .csrf(csrf -> csrf.disable())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/auth/register", "/auth/login").permitAll()
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                        .requestMatchers("/auth/register", "/auth/login", "/api/test").permitAll()
+                        // Ai cũng xem được gói tập (trang chủ, trang đăng ký)
+                        .requestMatchers(HttpMethod.GET, "/api/membership-packages/**").permitAll()
+                        // Đã đăng nhập thì xem được phòng, lớp, lịch, danh sách Coach
+                        .requestMatchers(HttpMethod.GET, "/api/**").authenticated()
+                        // Thêm / sửa / xóa gói, phòng, lớp, lịch: chỉ Center Manager
+                        .requestMatchers("/api/**").hasRole("MANAGER")
                         .requestMatchers("/manager/**").hasRole("MANAGER")
                         .requestMatchers("/coach/**").hasRole("COACH")
                         .requestMatchers("/member/**").hasRole("MEMBER")
@@ -58,6 +73,19 @@ public class SecurityConfig {
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
         return http.build();
     }
+    // Cho phép Front-End (Vite chạy ở localhost:5173) gọi API
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource(
+            @Value("${app.cors.allowed-origins:http://localhost:5173}") List<String> allowedOrigins) {
+        CorsConfiguration config = new CorsConfiguration();
+        config.setAllowedOrigins(allowedOrigins);
+        config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
+        config.setAllowedHeaders(List.of("Authorization", "Content-Type"));
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", config);
+        return source;
+    }
+
     private void writeError(HttpServletResponse response, int status, String message) throws IOException {
         response.setStatus(status);
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);

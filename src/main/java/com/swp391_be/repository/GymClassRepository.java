@@ -1,7 +1,7 @@
-package com.sportscenter.repository;
+package com.swp391_be.repository;
 
-import com.sportscenter.entity.Class;
+import com.swp391_be.entity.GymClass;
 import org.springframework.data.jpa.repository.JpaRepository;
 
-public interface ClassRepository extends JpaRepository<Class, Long> {
+public interface GymClassRepository extends JpaRepository<GymClass, Long> {
 }

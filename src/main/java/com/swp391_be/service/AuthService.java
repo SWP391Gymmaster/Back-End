@@ -41,6 +41,6 @@ public class AuthService {
     }
     private AuthResponse response(User user) {
         return new AuthResponse(jwt.generateToken(user.getEmail(), user.getRole().name()),
-                user.getEmail(), user.getFullName(), user.getRole().name());
+                user.getEmail(), user.getFullName(), user.getRole().name(), user.getId());
     }
 }

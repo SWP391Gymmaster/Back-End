@@ -1,10 +1,11 @@
-package com.sportscenter.controller;
+package com.swp391_be.controller;
 
-import com.sportscenter.entity.Room;
-import com.sportscenter.service.RoomService;
-import org.springframework.web.bind.annotation.*;
-
+import com.swp391_be.entity.Room;
+import com.swp391_be.service.RoomService;
+import jakarta.validation.Valid;
 import java.util.List;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/rooms")
@@ -27,19 +28,20 @@ public class RoomController {
     }
 
     @PostMapping
-    public Room create(@RequestBody Room room) {
+    @ResponseStatus(HttpStatus.CREATED)
+    public Room create(@Valid @RequestBody Room room) {
         return service.create(room);
     }
 
     @PutMapping("/{id}")
     public Room update(
             @PathVariable Long id,
-            @RequestBody Room room) {
-
+            @Valid @RequestBody Room room) {
         return service.update(id, room);
     }
 
     @DeleteMapping("/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
     public void delete(@PathVariable Long id) {
         service.delete(id);
     }

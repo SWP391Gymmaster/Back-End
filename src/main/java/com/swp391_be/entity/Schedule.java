@@ -1,6 +1,7 @@
-package com.sportscenter.entity;
+package com.swp391_be.entity;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotNull;
 import java.time.LocalDateTime;
 
 @Entity
@@ -11,10 +12,13 @@ public class Schedule {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @NotNull
     private Long classId;
 
+    // Bỏ trống thì lấy Coach đang phụ trách lớp
     private Long coachId;
 
+    @NotNull
     private Long roomId;
 
     @Column(nullable = false)

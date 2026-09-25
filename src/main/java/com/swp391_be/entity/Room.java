@@ -1,6 +1,8 @@
-package com.sportscenter.entity;
+package com.swp391_be.entity;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Positive;
 
 @Entity
 @Table(name = "rooms")
@@ -10,9 +12,11 @@ public class Room {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @NotBlank
     @Column(nullable = false)
     private String name;
 
+    @Positive
     private Integer capacity;
 
     public Room() {

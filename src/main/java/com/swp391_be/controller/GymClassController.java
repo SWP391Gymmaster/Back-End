@@ -1,45 +1,47 @@
-package com.sportscenter.controller;
+package com.swp391_be.controller;
 
-import com.sportscenter.entity.Class;
-import com.sportscenter.service.ClassService;
-import org.springframework.web.bind.annotation.*;
-
+import com.swp391_be.entity.GymClass;
+import com.swp391_be.service.GymClassService;
+import jakarta.validation.Valid;
 import java.util.List;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/classes")
-public class ClassController {
+public class GymClassController {
 
-    private final ClassService service;
+    private final GymClassService service;
 
-    public ClassController(ClassService service) {
+    public GymClassController(GymClassService service) {
         this.service = service;
     }
 
     @GetMapping
-    public List<Class> getAll() {
+    public List<GymClass> getAll() {
         return service.getAll();
     }
 
     @GetMapping("/{id}")
-    public Class getById(@PathVariable Long id) {
+    public GymClass getById(@PathVariable Long id) {
         return service.getById(id);
     }
 
     @PostMapping
-    public Class create(@RequestBody Class classEntity) {
+    @ResponseStatus(HttpStatus.CREATED)
+    public GymClass create(@Valid @RequestBody GymClass classEntity) {
         return service.create(classEntity);
     }
 
     @PutMapping("/{id}")
-    public Class update(
+    public GymClass update(
             @PathVariable Long id,
-            @RequestBody Class classEntity) {
-
+            @Valid @RequestBody GymClass classEntity) {
         return service.update(id, classEntity);
     }
 
     @DeleteMapping("/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
     public void delete(@PathVariable Long id) {
         service.delete(id);
     }

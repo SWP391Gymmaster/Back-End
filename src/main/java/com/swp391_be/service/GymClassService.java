@@ -1,45 +1,68 @@
-package com.sportscenter.service;
+package com.swp391_be.service;
 
-import com.sportscenter.entity.Class;
-import com.sportscenter.repository.ClassRepository;
+import com.swp391_be.entity.GymClass;
+import com.swp391_be.entity.Role;
+import com.swp391_be.exception.BusinessException;
+import com.swp391_be.exception.ResourceNotFoundException;
+import com.swp391_be.repository.GymClassRepository;
+import com.swp391_be.repository.ScheduleRepository;
+import com.swp391_be.repository.UserRepository;
+import java.util.List;
 import org.springframework.stereotype.Service;
 
-import java.util.List;
-
 @Service
-public class ClassService {
+public class GymClassService {
 
-    private final ClassRepository repository;
+    private final GymClassRepository repository;
+    private final ScheduleRepository scheduleRepository;
+    private final UserRepository userRepository;
 
-    public ClassService(ClassRepository repository) {
+    public GymClassService(
+            GymClassRepository repository,
+            ScheduleRepository scheduleRepository,
+            UserRepository userRepository) {
         this.repository = repository;
+        this.scheduleRepository = scheduleRepository;
+        this.userRepository = userRepository;
     }
 
-    public List<Class> getAll() {
+    public List<GymClass> getAll() {
         return repository.findAll();
     }
 
-    public Class getById(Long id) {
+    public GymClass getById(Long id) {
         return repository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Class not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Class not found"));
     }
 
-    public Class create(Class classEntity) {
+    public GymClass create(GymClass classEntity) {
+        validateCoach(classEntity.getCoachId());
         return repository.save(classEntity);
     }
 
-    public Class update(Long id, Class classEntity) {
-        Class existing = getById(id);
-
+    public GymClass update(Long id, GymClass classEntity) {
+        GymClass existing = getById(id);
+        validateCoach(classEntity.getCoachId());
         existing.setName(classEntity.getName());
+        existing.setSubject(classEntity.getSubject());
         existing.setDescription(classEntity.getDescription());
         existing.setCapacity(classEntity.getCapacity());
         existing.setCoachId(classEntity.getCoachId());
-
         return repository.save(existing);
     }
 
     public void delete(Long id) {
-        repository.deleteById(id);
+        GymClass existing = getById(id);
+        if (scheduleRepository.existsByClassId(id)) {
+            throw new BusinessException("Class still has schedules, delete them first");
+        }
+        repository.delete(existing);
+    }
+
+    // coachId phải là một user có role COACH (cho phép bỏ trống khi chưa phân công)
+    void validateCoach(Long coachId) {
+        if (coachId != null && !userRepository.existsByIdAndRole(coachId, Role.COACH)) {
+            throw new BusinessException("Coach not found");
+        }
     }
 }

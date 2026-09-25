@@ -1,6 +1,10 @@
-package com.sportscenter.entity;
+package com.swp391_be.entity;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.PositiveOrZero;
 
 @Entity
 @Table(name = "membership_packages")
@@ -10,14 +14,23 @@ public class MembershipPackage {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @NotBlank
     @Column(nullable = false)
     private String name;
 
     private String description;
 
+    @NotNull
+    @PositiveOrZero
     private Double price;
 
+    @NotNull
+    @Positive
     private Integer durationDays;
+
+    // false = tạm ngưng bán (không xóa để giữ lịch sử giao dịch)
+    @Column(nullable = false)
+    private Boolean active = true;
 
     public MembershipPackage() {
     }
@@ -67,5 +80,13 @@ public class MembershipPackage {
 
     public void setDurationDays(Integer durationDays) {
         this.durationDays = durationDays;
+    }
+
+    public Boolean getActive() {
+        return active;
+    }
+
+    public void setActive(Boolean active) {
+        this.active = active;
     }
 }
