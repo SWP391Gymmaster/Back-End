@@ -4,6 +4,7 @@ import com.swp391_be.entity.GymClass;
 import com.swp391_be.entity.Schedule;
 import com.swp391_be.exception.BusinessException;
 import com.swp391_be.exception.ResourceNotFoundException;
+import com.swp391_be.repository.ClassEnrollmentRepository;
 import com.swp391_be.repository.ScheduleRepository;
 import java.util.List;
 import org.springframework.stereotype.Service;
@@ -14,14 +15,17 @@ public class ScheduleService {
     private final ScheduleRepository repository;
     private final GymClassService classService;
     private final RoomService roomService;
+    private final ClassEnrollmentRepository enrollmentRepository;
 
     public ScheduleService(
             ScheduleRepository repository,
             GymClassService classService,
-            RoomService roomService) {
+            RoomService roomService,
+            ClassEnrollmentRepository enrollmentRepository) {
         this.repository = repository;
         this.classService = classService;
         this.roomService = roomService;
+        this.enrollmentRepository = enrollmentRepository;
     }
 
     public List<Schedule> getAll() {
@@ -58,7 +62,11 @@ public class ScheduleService {
     }
 
     public void delete(Long id) {
-        repository.delete(getById(id));
+        Schedule schedule = getById(id);
+        if (enrollmentRepository.existsByScheduleId(id)) {
+            throw new BusinessException("Schedule has enrollments");
+        }
+        repository.delete(schedule);
     }
 
     private void validate(Schedule schedule, Long excludedScheduleId) {

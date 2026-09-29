@@ -21,6 +21,23 @@ SELECT * FROM (
 WHERE NOT EXISTS (SELECT 1 FROM rooms);
 
 SET @coachId = (SELECT id FROM users WHERE email = 'coach@example.com');
+SET @memberId = (SELECT id FROM users WHERE email = 'member@example.com');
+SET @demoPackageId = (SELECT id FROM membership_packages ORDER BY duration_days LIMIT 1);
+SET @demoDurationDays = (SELECT duration_days FROM membership_packages WHERE id = @demoPackageId);
+
+-- Demo member package validity for class enrollment APIs.
+INSERT INTO member_memberships (member_id, package_id, start_date, end_date)
+SELECT @memberId, @demoPackageId, CURDATE(), CURDATE() + INTERVAL (@demoDurationDays - 1) DAY
+FROM DUAL
+WHERE @memberId IS NOT NULL
+  AND @demoPackageId IS NOT NULL
+  AND NOT EXISTS (
+      SELECT 1
+      FROM member_memberships
+      WHERE member_id = @memberId
+        AND package_id = @demoPackageId
+        AND start_date = CURDATE()
+  );
 
 INSERT INTO classes (name, subject, description, capacity, coach_id)
 SELECT 'Boxing cơ bản', 'Boxing', 'Lớp Boxing cho người mới', 15, @coachId

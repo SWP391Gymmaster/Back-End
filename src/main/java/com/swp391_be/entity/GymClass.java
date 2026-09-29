@@ -2,6 +2,7 @@ package com.swp391_be.entity;
 
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 
 // Đổi tên từ "Class" để không trùng với java.lang.Class. Tên bảng vẫn là "classes".
@@ -22,7 +23,9 @@ public class GymClass {
 
     private String description;
 
+    @NotNull
     @Positive
+    @Column(nullable = false)
     private Integer capacity;
 
     // Coach phụ trách lớp (id trong bảng users, role = COACH)
