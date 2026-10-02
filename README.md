@@ -46,6 +46,38 @@ Nếu Coach hoặc phòng đã có lịch giao nhau, API trả về `400` kèm `
 
 Mã lỗi chung: `400` dữ liệu sai / vi phạm nghiệp vụ, `401` chưa đăng nhập, `403` không đủ quyền, `404` không tìm thấy, `409` email hoặc username đã tồn tại.
 
+### Member class enrollment
+
+Member endpoints:
+
+| Method | Path | Role |
+|---|---|---|
+| GET | `/api/member/class-sessions/available` | MEMBER |
+| GET | `/api/member/class-enrollments` | MEMBER |
+| POST | `/api/member/class-sessions/{scheduleId}/enrollment` | MEMBER |
+| DELETE | `/api/member/class-sessions/{scheduleId}/enrollment` | MEMBER |
+
+`MembershipPackage` is the package catalog. A member's usable period is stored in `member_memberships`. A package is valid for enrollment/cancellation only when `start_date <= today <= end_date` and the class session date is also inside the same date range.
+
+Available session response fields include `scheduleId`, `classId`, `className`, `subject`, `coachId`, `roomId`, `startTime`, `endTime`, `capacity`, `registeredCount`, `remainingSlots`, and `registeredByMe`.
+
+Acceptance checks:
+- Valid package and available seat: `POST /api/member/class-sessions/{scheduleId}/enrollment` returns `201`.
+- Valid package and own enrollment: `DELETE /api/member/class-sessions/{scheduleId}/enrollment` returns `204`.
+- Expired or uncovered package: POST/DELETE returns `400` with `Membership package is expired or does not cover this class session`.
+- Full class session: POST returns `400` with `Class session is full`.
+- Wrong role: member routes return `403`.
+
+PowerShell example:
+
+```powershell
+$login = Invoke-RestMethod -Uri "http://localhost:8080/auth/login" -Method Post -ContentType "application/json" -Body '{"email":"member@example.com","password":"password123"}'
+$headers = @{ Authorization = "Bearer $($login.token)" }
+Invoke-RestMethod -Uri "http://localhost:8080/api/member/class-sessions/available" -Headers $headers
+Invoke-RestMethod -Uri "http://localhost:8080/api/member/class-sessions/1/enrollment" -Method Post -Headers $headers
+Invoke-WebRequest -Uri "http://localhost:8080/api/member/class-sessions/1/enrollment" -Method Delete -Headers $headers
+```
+
 ## Front-End
 Front-End (Vite) chạy ở http://localhost:5173 đã được cho phép gọi API (CORS). Muốn thêm địa chỉ khác, đặt biến môi trường `CORS_ORIGINS`.
 

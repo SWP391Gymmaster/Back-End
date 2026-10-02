@@ -55,6 +55,7 @@ public class SecurityConfig {
                         .requestMatchers("/auth/register", "/auth/login", "/api/test").permitAll()
                         // Ai cũng xem được gói tập (trang chủ, trang đăng ký)
                         .requestMatchers(HttpMethod.GET, "/api/membership-packages/**").permitAll()
+                        .requestMatchers("/api/member/**").hasRole("MEMBER")
                         // Đã đăng nhập thì xem được phòng, lớp, lịch, danh sách Coach
                         .requestMatchers(HttpMethod.GET, "/api/**").authenticated()
                         // Thêm / sửa / xóa gói, phòng, lớp, lịch: chỉ Center Manager

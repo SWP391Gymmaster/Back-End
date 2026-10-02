@@ -1,9 +1,14 @@
 package com.swp391_be.repository;
 
 import com.swp391_be.entity.Schedule;
+import jakarta.persistence.LockModeType;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 public interface ScheduleRepository extends JpaRepository<Schedule, Long> {
 
@@ -22,4 +27,10 @@ public interface ScheduleRepository extends JpaRepository<Schedule, Long> {
     boolean existsByRoomId(Long roomId);
 
     boolean existsByClassId(Long classId);
+
+    List<Schedule> findByStartTimeAfterOrderByStartTime(LocalDateTime startTime);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select schedule from Schedule schedule where schedule.id = :id")
+    Optional<Schedule> findByIdForUpdate(@Param("id") Long id);
 }
