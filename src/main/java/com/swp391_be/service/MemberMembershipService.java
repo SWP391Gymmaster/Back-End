@@ -5,7 +5,11 @@ import com.swp391_be.exception.BusinessException;
 import com.swp391_be.repository.MemberMembershipRepository;
 import java.time.Clock;
 import java.time.LocalDate;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Optional;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class MemberMembershipService {
@@ -25,19 +29,19 @@ public class MemberMembershipService {
         }
     }
 
-    @org.springframework.transaction.annotation.Transactional
+    @Transactional
     public MemberMembership activateMembership(Long memberId, Long packageId, int durationDays) {
         if (durationDays <= 0) {
             throw new BusinessException("Package duration must be greater than zero");
         }
         LocalDate today = LocalDate.now(clock);
-        java.util.List<MemberMembership> existing = memberships.findByMemberIdOrderByEndDateDesc(memberId);
+        List<MemberMembership> existing = memberships.findByMemberIdOrderByEndDateDesc(memberId);
 
         LocalDate startDate = today;
-        java.util.Optional<LocalDate> latestEndDate = existing.stream()
-                .map(MemberMembership::getEndDate)
-                .filter(endDate -> !endDate.isBefore(today))
-                .max(LocalDate::compareTo);
+        Optional<LocalDate> latestEndDate = existing.stream()
+                .map(m -> m.getEndDate())
+                .filter(endDate -> endDate != null && !endDate.isBefore(today))
+                .max(Comparator.naturalOrder());
 
         if (latestEndDate.isPresent()) {
             startDate = latestEndDate.get().plusDays(1);
@@ -48,7 +52,7 @@ public class MemberMembershipService {
         return memberships.save(newMembership);
     }
 
-    public java.util.List<MemberMembership> getMembershipsByMemberId(Long memberId) {
+    public List<MemberMembership> getMembershipsByMemberId(Long memberId) {
         return memberships.findByMemberIdOrderByEndDateDesc(memberId);
     }
 }
