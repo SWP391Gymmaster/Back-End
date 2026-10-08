@@ -19,4 +19,8 @@ public interface MemberMembershipRepository extends JpaRepository<MemberMembersh
             @Param("memberId") Long memberId,
             @Param("today") LocalDate today,
             @Param("sessionDate") LocalDate sessionDate);
+
+    List<MemberMembership> findByMemberIdOrderByEndDateDesc(Long memberId);
+
+    List<MemberMembership> findByMemberId(Long memberId);
 }
