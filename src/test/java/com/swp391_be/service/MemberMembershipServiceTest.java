@@ -85,4 +85,42 @@ class MemberMembershipServiceTest {
                 .isInstanceOf(BusinessException.class)
                 .hasMessage("Membership package is expired or does not cover this class session");
     }
+
+    @Test
+    void activatesNewMembershipStartingTodayWhenNoExistingMemberships() {
+        when(memberships.findByMemberIdOrderByEndDateDesc(MEMBER_ID)).thenReturn(List.of());
+        when(memberships.save(org.mockito.ArgumentMatchers.any(MemberMembership.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        service = new MemberMembershipService(memberships, clock);
+        MemberMembership result = service.activateMembership(MEMBER_ID, 10L, 30);
+
+        org.assertj.core.api.Assertions.assertThat(result.getStartDate()).isEqualTo(TODAY);
+        org.assertj.core.api.Assertions.assertThat(result.getEndDate()).isEqualTo(TODAY.plusDays(29));
+        org.assertj.core.api.Assertions.assertThat(result.getPackageId()).isEqualTo(10L);
+    }
+
+    @Test
+    void activatesNewMembershipExtendingFromActiveMembershipEndDate() {
+        LocalDate existingEndDate = TODAY.plusDays(10);
+        MemberMembership currentMembership = new MemberMembership(MEMBER_ID, 5L, TODAY.minusDays(10), existingEndDate);
+        when(memberships.findByMemberIdOrderByEndDateDesc(MEMBER_ID)).thenReturn(List.of(currentMembership));
+        when(memberships.save(org.mockito.ArgumentMatchers.any(MemberMembership.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        service = new MemberMembershipService(memberships, clock);
+        MemberMembership result = service.activateMembership(MEMBER_ID, 10L, 30);
+
+        org.assertj.core.api.Assertions.assertThat(result.getStartDate()).isEqualTo(existingEndDate.plusDays(1));
+        org.assertj.core.api.Assertions.assertThat(result.getEndDate()).isEqualTo(existingEndDate.plusDays(30));
+    }
+
+    @Test
+    void rejectsZeroOrNegativeDurationDays() {
+        service = new MemberMembershipService(memberships, clock);
+
+        assertThatThrownBy(() -> service.activateMembership(MEMBER_ID, 10L, 0))
+                .isInstanceOf(BusinessException.class)
+                .hasMessage("Package duration must be greater than zero");
+    }
 }
