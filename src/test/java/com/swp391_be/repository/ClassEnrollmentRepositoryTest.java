@@ -7,6 +7,7 @@ import com.swp391_be.entity.ClassEnrollment;
 import com.swp391_be.entity.GymClass;
 import com.swp391_be.entity.Role;
 import com.swp391_be.entity.Room;
+import com.swp391_be.entity.RoomType;
 import com.swp391_be.entity.Schedule;
 import com.swp391_be.entity.User;
 import java.time.Instant;
@@ -68,7 +69,7 @@ class ClassEnrollmentRepositoryTest {
                 null,
                 Role.COACH)).getId();
         Long classId = classes.save(new GymClass("Yoga", "Yoga", "Morning yoga", 2, coachId)).getId();
-        Long roomId = rooms.save(new Room("Room A", 10)).getId();
+        Long roomId = rooms.save(new Room("Room A", 10, RoomType.YOGA)).getId();
         return schedules.save(new Schedule(
                 classId,
                 coachId,

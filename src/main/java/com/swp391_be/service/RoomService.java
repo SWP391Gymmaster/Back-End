@@ -1,11 +1,15 @@
 package com.swp391_be.service;
 
+import com.swp391_be.dto.RoomResponse;
 import com.swp391_be.entity.Room;
+import com.swp391_be.entity.Schedule;
 import com.swp391_be.exception.BusinessException;
 import com.swp391_be.exception.ResourceNotFoundException;
 import com.swp391_be.repository.RoomRepository;
 import com.swp391_be.repository.ScheduleRepository;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -19,13 +23,31 @@ public class RoomService {
         this.scheduleRepository = scheduleRepository;
     }
 
-    public List<Room> getAll() {
-        return roomRepository.findAll();
+    public List<RoomResponse> getAll() {
+        Map<Long, Long> counts = classCounts();
+        return roomRepository.findAll().stream()
+                .map(room -> RoomResponse.of(room, counts.getOrDefault(room.getId(), 0L)))
+                .toList();
+    }
+
+    public RoomResponse getResponseById(Long id) {
+        Room room = getById(id);
+        return RoomResponse.of(room, classCounts().getOrDefault(id, 0L));
+    }
+
+    public List<Schedule> getSchedules(Long id) {
+        getById(id);
+        return scheduleRepository.findByRoomIdOrderByStartTime(id);
     }
 
     public Room getById(Long id) {
         return roomRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Room not found"));
+    }
+
+    private Map<Long, Long> classCounts() {
+        return scheduleRepository.countClassesPerRoom().stream()
+                .collect(Collectors.toMap(row -> (Long) row[0], row -> (Long) row[1]));
     }
 
     public Room create(Room room) {
@@ -36,6 +58,7 @@ public class RoomService {
         Room existing = getById(id);
         existing.setName(room.getName());
         existing.setCapacity(room.getCapacity());
+        existing.setType(room.getType());
         return roomRepository.save(existing);
     }
 

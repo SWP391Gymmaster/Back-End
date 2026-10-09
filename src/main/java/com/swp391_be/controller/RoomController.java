@@ -1,6 +1,8 @@
 package com.swp391_be.controller;
 
+import com.swp391_be.dto.RoomResponse;
 import com.swp391_be.entity.Room;
+import com.swp391_be.entity.Schedule;
 import com.swp391_be.service.RoomService;
 import jakarta.validation.Valid;
 import java.util.List;
@@ -18,13 +20,18 @@ public class RoomController {
     }
 
     @GetMapping
-    public List<Room> getAll() {
+    public List<RoomResponse> getAll() {
         return service.getAll();
     }
 
     @GetMapping("/{id}")
-    public Room getById(@PathVariable Long id) {
-        return service.getById(id);
+    public RoomResponse getById(@PathVariable Long id) {
+        return service.getResponseById(id);
+    }
+
+    @GetMapping("/{id}/schedules")
+    public List<Schedule> getSchedules(@PathVariable Long id) {
+        return service.getSchedules(id);
     }
 
     @PostMapping

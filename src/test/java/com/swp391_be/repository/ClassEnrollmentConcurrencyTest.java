@@ -6,6 +6,7 @@ import com.swp391_be.entity.GymClass;
 import com.swp391_be.entity.MemberMembership;
 import com.swp391_be.entity.Role;
 import com.swp391_be.entity.Room;
+import com.swp391_be.entity.RoomType;
 import com.swp391_be.entity.Schedule;
 import com.swp391_be.entity.User;
 import com.swp391_be.exception.BusinessException;
@@ -58,7 +59,7 @@ class ClassEnrollmentConcurrencyTest {
         Long member1Id = users.save(new User(unique("member1"), "Member One", unique("member1") + "@example.com", "hash", null, Role.MEMBER)).getId();
         Long member2Id = users.save(new User(unique("member2"), "Member Two", unique("member2") + "@example.com", "hash", null, Role.MEMBER)).getId();
         Long classId = classes.save(new GymClass("Capacity One", "Yoga", "One seat", 1, coachId)).getId();
-        Long roomId = rooms.save(new Room(unique("room"), 10)).getId();
+        Long roomId = rooms.save(new Room(unique("room"), 10, RoomType.YOGA)).getId();
         Long scheduleId = schedules.save(new Schedule(
                 classId,
                 coachId,
