@@ -2,6 +2,7 @@ package com.swp391_be.entity;
 
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 
 @Entity
@@ -19,12 +20,25 @@ public class Room {
     @Positive
     private Integer capacity;
 
+    @NotNull
+    @Enumerated(EnumType.STRING)
+    private RoomType type;
+
     public Room() {
     }
 
-    public Room(String name, Integer capacity) {
+    public Room(String name, Integer capacity, RoomType type) {
         this.name = name;
         this.capacity = capacity;
+        this.type = type;
+    }
+
+    public RoomType getType() {
+        return type;
+    }
+
+    public void setType(RoomType type) {
+        this.type = type;
     }
 
     public Long getId() {

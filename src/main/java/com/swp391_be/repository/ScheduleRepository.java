@@ -24,6 +24,12 @@ public interface ScheduleRepository extends JpaRepository<Schedule, Long> {
 
     List<Schedule> findByClassIdOrderByStartTime(Long classId);
 
+    List<Schedule> findByRoomIdOrderByStartTime(Long roomId);
+
+    // [roomId, số lớp distinct] cho mọi phòng đã có lịch
+    @Query("select s.roomId, count(distinct s.classId) from Schedule s group by s.roomId")
+    List<Object[]> countClassesPerRoom();
+
     boolean existsByRoomId(Long roomId);
 
     boolean existsByClassId(Long classId);
