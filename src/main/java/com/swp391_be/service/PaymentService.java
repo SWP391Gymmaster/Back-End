@@ -105,7 +105,8 @@ public class PaymentService {
         Invoice invoice = invoices.findById(payment.getInvoiceId())
                 .orElseThrow(() -> new ResourceNotFoundException("Invoice not found"));
 
-        User member = users.findById(payment.getMemberId())
+        Long memberId = payment.getMemberId();
+        User member = users.findByIdForUpdate(memberId).or(() -> users.findById(memberId))
                 .orElseThrow(() -> new ResourceNotFoundException("Member not found"));
 
         MembershipPackage pkg = packages.findById(invoice.getPackageId())
@@ -276,7 +277,7 @@ public class PaymentService {
     }
 
     private User validateAndGetMember(Long memberId) {
-        User user = users.findById(memberId)
+        User user = users.findByIdForUpdate(memberId).or(() -> users.findById(memberId))
                 .orElseThrow(() -> new ResourceNotFoundException("Member not found"));
         if (user.getRole() != Role.MEMBER) {
             throw new BusinessException("User is not a member");

@@ -10,17 +10,22 @@ import jakarta.persistence.*;
 public class User {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    @Column(name = "user_name", nullable = false)
+    @Column(name = "user_name", nullable = false, length = 50)
     private String userName;
-    @Column(name = "full_name", nullable = false)
+    @Column(name = "full_name", nullable = false, length = 100)
     private String fullName;
-    @Column(nullable = false)
+    @Column(nullable = false, length = 254)
     private String email;
     @Column(name = "password_hash", nullable = false)
     private String passwordHash;
+    @Column(length = 30)
     private String phone;
     @Enumerated(EnumType.STRING) @Column(nullable = false)
     private Role role;
+    @Column(nullable = false)
+    private boolean enabled = true;
+    @Column(name = "email_verified", nullable = false)
+    private boolean emailVerified;
 
     protected User() {}
     public User(String userName, String fullName, String email, String passwordHash, String phone, Role role) {
@@ -44,4 +49,8 @@ public class User {
     public void setPhone(String phone) { this.phone = phone; }
     public Role getRole() { return role; }
     public void setRole(Role role) { this.role = role; }
+    public boolean isEnabled() { return enabled; }
+    public void setEnabled(boolean enabled) { this.enabled = enabled; }
+    public boolean isEmailVerified() { return emailVerified; }
+    public void setEmailVerified(boolean emailVerified) { this.emailVerified = emailVerified; }
 }

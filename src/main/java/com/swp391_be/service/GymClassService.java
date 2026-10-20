@@ -10,6 +10,7 @@ import com.swp391_be.repository.ScheduleRepository;
 import com.swp391_be.repository.UserRepository;
 import java.util.List;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class GymClassService {
@@ -39,11 +40,13 @@ public class GymClassService {
                 .orElseThrow(() -> new ResourceNotFoundException("Class not found"));
     }
 
+    @Transactional
     public GymClass create(GymClass classEntity) {
         validateCoach(classEntity.getCoachId());
         return repository.save(classEntity);
     }
 
+    @Transactional
     public GymClass update(Long id, GymClass classEntity) {
         GymClass existing = getById(id);
         validateCoach(classEntity.getCoachId());
@@ -87,8 +90,13 @@ public class GymClassService {
 
     // coachId phải là một user có role COACH (cho phép bỏ trống khi chưa phân công)
     void validateCoach(Long coachId) {
-        if (coachId != null && !userRepository.existsByIdAndRole(coachId, Role.COACH)) {
-            throw new BusinessException("Coach not found");
+        if (coachId != null) {
+            boolean valid = userRepository.findByIdForUpdate(coachId)
+                    .map(user -> user.getRole() == Role.COACH)
+                    .orElseGet(() -> userRepository.existsByIdAndRole(coachId, Role.COACH));
+            if (!valid) {
+                throw new BusinessException("Coach not found");
+            }
         }
     }
 }

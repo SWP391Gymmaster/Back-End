@@ -46,6 +46,28 @@ Nếu Coach hoặc phòng đã có lịch giao nhau, API trả về `400` kèm `
 
 Mã lỗi chung: `400` dữ liệu sai / vi phạm nghiệp vụ, `401` chưa đăng nhập, `403` không đủ quyền, `404` không tìm thấy, `409` email hoặc username đã tồn tại.
 
+### Account verification and admin users
+
+Public registration creates an unverified MEMBER and returns no JWT. The user verifies through `POST /auth/verify-email` with `{ "token": "..." }`; `POST /auth/resend-verification` returns a generic `202` response. Verification links are single-use and expire after 24 hours. Correct credentials for an unverified account return `403 EMAIL_NOT_VERIFIED`.
+
+ADMIN-only endpoints manage non-admin accounts:
+
+| Method | Path | Action |
+|---|---|---|
+| GET | `/api/admin/users?page=0&size=20&q=&role=&enabled=&emailVerified=` | Search/filter users; ADMIN accounts are excluded |
+| GET | `/api/admin/users/{id}` | View a managed user |
+| POST | `/api/admin/users` | Create a managed user; verification required |
+| PATCH | `/api/admin/users/{id}` | Update profile, email, or role |
+| DELETE | `/api/admin/users/{id}` | Deactivate and preserve business history |
+| PATCH | `/api/admin/users/{id}/status` | `{ "enabled": true }` to enable or disable |
+| POST | `/api/admin/users/{id}/verification-email` | Resend verification email |
+
+Email changes require verification again. Configure `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_PASSWORD`, `MAIL_FROM`, and `FRONTEND_BASE_URL` for email delivery. In production use the `production` profile and an HTTPS frontend URL. Admin-created users receive no password email; deliver the initial password over a separate trusted channel. Provision an ADMIN using `sql/provision-admin.sql` with operator-supplied values.
+
+Before exposing public authentication endpoints, configure a trusted reverse proxy with per-IP limits (registration 10/hour, resend 20/hour, verification 60/minute, login 10/minute) and request body limits. Trust forwarded client IP headers only from that proxy; per-account email quotas do not replace these limits.
+
+For an existing database, inspect and resolve conflicts with `sql/migrations/2026-10-20-user-management-preflight.sql`, back up the database, then run `sql/migrations/2026-10-20-user-management.sql` once before starting the updated application. Existing accounts are marked verified for compatibility. Existing JWT sessions must log in again because tokens now identify immutable user IDs.
+
 ### Member class enrollment
 
 Member endpoints:

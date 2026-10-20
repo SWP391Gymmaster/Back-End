@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 public interface MemberMembershipRepository extends JpaRepository<MemberMembership, Long> {
+    boolean existsByMemberId(Long memberId);
 
     @Query("""
             select membership from MemberMembership membership

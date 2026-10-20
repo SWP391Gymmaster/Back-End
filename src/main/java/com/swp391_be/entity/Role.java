@@ -1,3 +1,3 @@
 package com.swp391_be.entity;
 
-public enum Role { MANAGER, COACH, MEMBER, RECEPTIONIST }
+public enum Role { ADMIN, MANAGER, COACH, MEMBER, RECEPTIONIST }

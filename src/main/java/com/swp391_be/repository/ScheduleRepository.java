@@ -32,6 +32,8 @@ public interface ScheduleRepository extends JpaRepository<Schedule, Long> {
 
     boolean existsByRoomId(Long roomId);
 
+    boolean existsByCoachId(Long coachId);
+
     boolean existsByClassId(Long classId);
 
     List<Schedule> findByStartTimeAfterOrderByStartTime(LocalDateTime startTime);

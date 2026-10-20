@@ -8,6 +8,7 @@ import com.swp391_be.repository.ClassEnrollmentRepository;
 import com.swp391_be.repository.ScheduleRepository;
 import java.util.List;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class ScheduleService {
@@ -45,11 +46,13 @@ public class ScheduleService {
                 .orElseThrow(() -> new ResourceNotFoundException("Schedule not found"));
     }
 
+    @Transactional
     public Schedule create(Schedule schedule) {
         validate(schedule, null);
         return repository.save(schedule);
     }
 
+    @Transactional
     public Schedule update(Long id, Schedule schedule) {
         Schedule existing = getById(id);
         validate(schedule, id);

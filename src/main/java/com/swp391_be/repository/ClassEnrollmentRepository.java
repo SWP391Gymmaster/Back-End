@@ -6,6 +6,7 @@ import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface ClassEnrollmentRepository extends JpaRepository<ClassEnrollment, Long> {
+    boolean existsByMemberId(Long memberId);
 
     long countByScheduleId(Long scheduleId);
 

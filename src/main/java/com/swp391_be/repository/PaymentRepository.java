@@ -7,6 +7,7 @@ import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface PaymentRepository extends JpaRepository<Payment, Long> {
+    boolean existsByMemberId(Long memberId);
 
     Optional<Payment> findByPaymentCode(String paymentCode);
 

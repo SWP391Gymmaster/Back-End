@@ -52,7 +52,9 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                        .requestMatchers("/auth/register", "/auth/login", "/api/test").permitAll()
+                        .requestMatchers("/auth/register", "/auth/login", "/auth/verify-email",
+                                "/auth/resend-verification", "/api/test").permitAll()
+                        .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         // Ai cũng xem được gói tập (trang chủ, trang đăng ký)
                         .requestMatchers(HttpMethod.GET, "/api/membership-packages/**").permitAll()
                         .requestMatchers("/api/member/**").hasRole("MEMBER")

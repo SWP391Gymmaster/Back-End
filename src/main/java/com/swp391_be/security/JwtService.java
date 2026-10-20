@@ -19,15 +19,15 @@ public class JwtService {
         this.key = Keys.hmacShaKeyFor(Base64.getDecoder().decode(secret));
         this.expirationMs = expirationMs;
     }
-    public String generateToken(String email, String role) {
+    public String generateToken(Long userId, String role) {
         Date now = new Date();
-        return Jwts.builder().subject(email).claim("role", role).issuedAt(now)
+        return Jwts.builder().subject(userId.toString()).claim("role", role).issuedAt(now)
                 .expiration(new Date(now.getTime() + expirationMs)).signWith(key).compact();
     }
-    public String extractEmail(String token) { return parseClaims(token).getSubject(); }
+    public Long extractUserId(String token) { return Long.valueOf(parseClaims(token).getSubject()); }
     public String extractRole(String token) { return parseClaims(token).get("role", String.class); }
     public boolean isTokenValid(String token) {
-        try { parseClaims(token); return true; }
+        try { Long.parseLong(parseClaims(token).getSubject()); return true; }
         catch (JwtException | IllegalArgumentException e) { return false; }
     }
     private Claims parseClaims(String token) {
