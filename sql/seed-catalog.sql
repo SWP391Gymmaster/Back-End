@@ -6,34 +6,34 @@ USE swp391_group3;
 
 -- Goi tap theo bang gia chinh sach CITIGYM (citigym.asia/chinh-sach-gia):
 -- Bronze = chi Gym 1 CLB; Silver = Gym + Yoga/Group X 1 CLB; Gold = toan he thong + Yoga/Group X.
--- Moi goi chi them neu chua co ten do.
-INSERT INTO membership_packages (name, description, price, duration_days, active)
-SELECT t.name, t.description, t.price, t.duration_days, 1 FROM (
-    SELECT 'Bronze 1 tháng' AS name, 'Khu Gym tại 1 CLB, tủ đồ, khăn, nước uống miễn phí' AS description, 1000000 AS price, 30 AS duration_days
-    UNION ALL SELECT 'Bronze 3 tháng',  'Khu Gym tại 1 CLB (900.000đ/tháng)',                      2700000, 90
-    UNION ALL SELECT 'Bronze 6 tháng',  'Khu Gym tại 1 CLB (800.000đ/tháng)',                      4800000, 180
-    UNION ALL SELECT 'Bronze 12 tháng', 'Khu Gym tại 1 CLB (600.000đ/tháng)',                      7200000, 365
-    UNION ALL SELECT 'Silver 1 tháng',  'Gym + Yoga + Group X tại 1 CLB',                          1250000, 30
-    UNION ALL SELECT 'Silver 3 tháng',  'Gym + Yoga + Group X tại 1 CLB (1.125.000đ/tháng)',       3375000, 90
-    UNION ALL SELECT 'Silver 6 tháng',  'Gym + Yoga + Group X tại 1 CLB (1.000.000đ/tháng)',       6000000, 180
-    UNION ALL SELECT 'Silver 12 tháng', 'Gym + Yoga + Group X tại 1 CLB (750.000đ/tháng)',         9000000, 365
-    UNION ALL SELECT 'Gold 1 tháng',    'Tập toàn hệ thống + Yoga + Group X',                      1400000, 30
-    UNION ALL SELECT 'Gold 3 tháng',    'Tập toàn hệ thống + Yoga + Group X (1.260.000đ/tháng)',   3780000, 90
-    UNION ALL SELECT 'Gold 6 tháng',    'Tập toàn hệ thống + Yoga + Group X (1.120.000đ/tháng)',   6720000, 180
-    UNION ALL SELECT 'Gold 12 tháng',   'Tập toàn hệ thống + Yoga + Group X (840.000đ/tháng)',    10080000, 365
+-- Moi goi chi them neu chua co ma/ten do (T5.1).
+INSERT INTO membership_packages (package_code, name, description, price, duration_days, status)
+SELECT t.package_code, t.name, t.description, t.price, t.duration_days, 'ACTIVE' FROM (
+    SELECT 'PKG-BRONZE-1M' AS package_code, 'Bronze 1 tháng' AS name, 'Khu Gym tại 1 CLB, tủ đồ, khăn, nước uống miễn phí' AS description, 1000000 AS price, 30 AS duration_days
+    UNION ALL SELECT 'PKG-BRONZE-3M',  'Bronze 3 tháng',  'Khu Gym tại 1 CLB (900.000đ/tháng)',                      2700000, 90
+    UNION ALL SELECT 'PKG-BRONZE-6M',  'Bronze 6 tháng',  'Khu Gym tại 1 CLB (800.000đ/tháng)',                      4800000, 180
+    UNION ALL SELECT 'PKG-BRONZE-12M', 'Bronze 12 tháng', 'Khu Gym tại 1 CLB (600.000đ/tháng)',                      7200000, 365
+    UNION ALL SELECT 'PKG-SILVER-1M',  'Silver 1 tháng',  'Gym + Yoga + Group X tại 1 CLB',                          1250000, 30
+    UNION ALL SELECT 'PKG-SILVER-3M',  'Silver 3 tháng',  'Gym + Yoga + Group X tại 1 CLB (1.125.000đ/tháng)',       3375000, 90
+    UNION ALL SELECT 'PKG-SILVER-6M',  'Silver 6 tháng',  'Gym + Yoga + Group X tại 1 CLB (1.000.000đ/tháng)',       6000000, 180
+    UNION ALL SELECT 'PKG-SILVER-12M', 'Silver 12 tháng', 'Gym + Yoga + Group X tại 1 CLB (750.000đ/tháng)',         9000000, 365
+    UNION ALL SELECT 'PKG-GOLD-1M',    'Gold 1 tháng',    'Tập toàn hệ thống + Yoga + Group X',                      1400000, 30
+    UNION ALL SELECT 'PKG-GOLD-3M',    'Gold 3 tháng',    'Tập toàn hệ thống + Yoga + Group X (1.260.000đ/tháng)',   3780000, 90
+    UNION ALL SELECT 'PKG-GOLD-6M',    'Gold 6 tháng',    'Tập toàn hệ thống + Yoga + Group X (1.120.000đ/tháng)',   6720000, 180
+    UNION ALL SELECT 'PKG-GOLD-12M',   'Gold 12 tháng',   'Tập toàn hệ thống + Yoga + Group X (840.000đ/tháng)',    10080000, 365
 ) AS t
-WHERE NOT EXISTS (SELECT 1 FROM membership_packages m WHERE m.name = t.name);
+WHERE NOT EXISTS (SELECT 1 FROM membership_packages m WHERE m.package_code = t.package_code OR m.name = t.name);
 
--- Khu tap (CITIGYM co cac khu: Gym, Yoga, Group X, Cycling). Moi phong chi them neu chua co ten do.
-INSERT INTO rooms (name, capacity, type)
-SELECT t.name, t.capacity, t.type FROM (
-    SELECT 'Phòng Gym A' AS name, 120 AS capacity, 'GYM' AS type
-    UNION ALL SELECT 'Phòng Yoga B',     30, 'YOGA'
-    UNION ALL SELECT 'Phòng Boxing C',   15, 'BOXING'
-    UNION ALL SELECT 'Studio Group X',   40, 'GROUP_X'
-    UNION ALL SELECT 'Phòng Cycling',    30, 'CYCLING'
+-- Khu tap (CITIGYM co cac khu: Gym, Yoga, Group X, Cycling). Moi phong chi them neu chua co ma/ten do (T5.4).
+INSERT INTO rooms (room_code, name, capacity, type)
+SELECT t.room_code, t.name, t.capacity, t.type FROM (
+    SELECT 'ROOM-GYM-A' AS room_code, 'Phòng Gym A' AS name, 120 AS capacity, 'GYM' AS type
+    UNION ALL SELECT 'ROOM-YOGA-B', 'Phòng Yoga B',     30, 'YOGA'
+    UNION ALL SELECT 'ROOM-BOX-C',   'Phòng Boxing C',   15, 'BOXING'
+    UNION ALL SELECT 'ROOM-GROUP-X', 'Studio Group X',   40, 'GROUP_X'
+    UNION ALL SELECT 'ROOM-CYCLE',   'Phòng Cycling',    30, 'CYCLING'
 ) AS t
-WHERE NOT EXISTS (SELECT 1 FROM rooms r WHERE r.name = t.name);
+WHERE NOT EXISTS (SELECT 1 FROM rooms r WHERE r.room_code = t.room_code OR r.name = t.name);
 
 -- Phong tao truoc khi co cot type: suy ra tu ten, con lai la OTHER
 UPDATE rooms SET type = CASE
@@ -64,22 +64,22 @@ WHERE @memberId IS NOT NULL
         AND start_date = CURDATE()
   );
 
--- Lop hoc (capacity <= suc chua phong). Coach phu trach mac dinh theo email.
-INSERT INTO classes (name, subject, description, capacity, coach_id)
-SELECT t.name, t.subject, t.description, t.capacity, u.id FROM (
-    SELECT 'Boxing cơ bản' AS name, 'Boxing' AS subject, 'Lớp Boxing cho người mới' AS description, 15 AS capacity, 'coach@example.com' AS coach_email
-    UNION ALL SELECT 'Boxing nâng cao',      'Boxing',   'Sparring và kỹ thuật phối hợp đòn',       12, 'coach@example.com'
-    UNION ALL SELECT 'Yoga Flow buổi sáng',  'Yoga',     'Yoga vinyasa nhẹ nhàng đón ngày mới',     30, 'coach.lan@example.com'
-    UNION ALL SELECT 'Yoga thư giãn',        'Yoga',     'Yoga phục hồi, giãn cơ sau giờ làm',      30, 'coach.lan@example.com'
-    UNION ALL SELECT 'Strength & Conditioning', 'Gym',   'Tập tạ có hướng dẫn, tăng sức mạnh',      30, 'coach.minh@example.com'
-    UNION ALL SELECT 'Body Pump',            'Group X',  'Tạ nhẹ theo nhạc, săn chắc toàn thân (60 phút)', 40, 'coach.trang@example.com'
-    UNION ALL SELECT 'Body Combat',          'Group X',  'Võ thuật theo nhạc, đốt calo (60 phút)',  35, 'coach.trang@example.com'
-    UNION ALL SELECT 'Zumba',                'Group X',  'Nhảy aerobic theo nhạc Latin',            40, 'coach.trang@example.com'
-    UNION ALL SELECT 'Bums & Tums',          'Group X',  'Chuyên mông và bụng',                     30, 'coach.trang@example.com'
-    UNION ALL SELECT 'RPM Cycling',          'Cycling',  'Đạp xe trong nhà theo nhạc',              30, 'coach.hung@example.com'
+-- Lop hoc (capacity <= suc chua phong). Coach phu trach mac dinh theo email (T5.4).
+INSERT INTO classes (class_code, name, subject, description, capacity, coach_id)
+SELECT t.class_code, t.name, t.subject, t.description, t.capacity, u.id FROM (
+    SELECT 'CLS-BOX-01' AS class_code, 'Boxing cơ bản' AS name, 'Boxing' AS subject, 'Lớp Boxing cho người mới' AS description, 15 AS capacity, 'coach@example.com' AS coach_email
+    UNION ALL SELECT 'CLS-BOX-02', 'Boxing nâng cao',      'Boxing',   'Sparring và kỹ thuật phối hợp đòn',       12, 'coach@example.com'
+    UNION ALL SELECT 'CLS-YOGA-01', 'Yoga Flow buổi sáng',  'Yoga',     'Yoga vinyasa nhẹ nhàng đón ngày mới',     30, 'coach.lan@example.com'
+    UNION ALL SELECT 'CLS-YOGA-02', 'Yoga thư giãn',        'Yoga',     'Yoga phục hồi, giãn cơ sau giờ làm',      30, 'coach.lan@example.com'
+    UNION ALL SELECT 'CLS-GYM-01', 'Strength & Conditioning', 'Gym',   'Tập tạ có hướng dẫn, tăng sức mạnh',      30, 'coach.minh@example.com'
+    UNION ALL SELECT 'CLS-GX-01', 'Body Pump',            'Group X',  'Tạ nhẹ theo nhạc, săn chắc toàn thân (60 phút)', 40, 'coach.trang@example.com'
+    UNION ALL SELECT 'CLS-GX-02', 'Body Combat',          'Group X',  'Võ thuật theo nhạc, đốt calo (60 phút)',  35, 'coach.trang@example.com'
+    UNION ALL SELECT 'CLS-GX-03', 'Zumba',                'Group X',  'Nhảy aerobic theo nhạc Latin',            40, 'coach.trang@example.com'
+    UNION ALL SELECT 'CLS-GX-04', 'Bums & Tums',          'Group X',  'Chuyên mông và bụng',                     30, 'coach.trang@example.com'
+    UNION ALL SELECT 'CLS-CYCLE-01', 'RPM Cycling',          'Cycling',  'Đạp xe trong nhà theo nhạc',              30, 'coach.hung@example.com'
 ) AS t
 JOIN users u ON u.email = t.coach_email
-WHERE NOT EXISTS (SELECT 1 FROM classes c WHERE c.name = t.name);
+WHERE NOT EXISTS (SELECT 1 FROM classes c WHERE c.class_code = t.class_code OR c.name = t.name);
 
 -- Lich 7 ngay toi. step=1: moi ngay, step=2: ngay cach ngay.
 -- Khong trung gio trong cung phong / cung coach; chay lai khong tao trung (kiem tra class + gio bat dau).
