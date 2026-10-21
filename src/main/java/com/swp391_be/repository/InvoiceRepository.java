@@ -18,4 +18,7 @@ public interface InvoiceRepository extends JpaRepository<Invoice, Long> {
     List<Invoice> findByStatusOrderByIssuedAtDesc(InvoiceStatus status);
 
     List<Invoice> findByMemberIdAndStatusOrderByIssuedAtDesc(Long memberId, InvoiceStatus status);
+
+    /** T5.2 — Kiểm tra gói đã có hóa đơn liên kết (để khoá sửa/xoá). */
+    boolean existsByPackageId(Long packageId);
 }

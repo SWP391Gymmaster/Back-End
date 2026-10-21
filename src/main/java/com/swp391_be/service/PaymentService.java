@@ -10,6 +10,7 @@ import com.swp391_be.entity.Invoice;
 import com.swp391_be.entity.InvoiceStatus;
 import com.swp391_be.entity.MemberMembership;
 import com.swp391_be.entity.MembershipPackage;
+import com.swp391_be.entity.PackageStatus;
 import com.swp391_be.entity.Payment;
 import com.swp391_be.entity.PaymentMethod;
 import com.swp391_be.entity.PaymentStatus;
@@ -288,7 +289,7 @@ public class PaymentService {
     private MembershipPackage validateAndGetActivePackage(Long packageId) {
         MembershipPackage pkg = packages.findById(packageId)
                 .orElseThrow(() -> new ResourceNotFoundException("Membership package not found"));
-        if (Boolean.FALSE.equals(pkg.getActive())) {
+        if (pkg.getStatus() != PackageStatus.ACTIVE) {
             throw new BusinessException("Membership package is currently inactive");
         }
         return pkg;

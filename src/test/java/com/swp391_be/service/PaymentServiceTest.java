@@ -14,6 +14,7 @@ import com.swp391_be.dto.PaymentResponse;
 import com.swp391_be.entity.Invoice;
 import com.swp391_be.entity.InvoiceStatus;
 import com.swp391_be.entity.MembershipPackage;
+import com.swp391_be.entity.PackageStatus;
 import com.swp391_be.entity.Payment;
 import com.swp391_be.entity.PaymentMethod;
 import com.swp391_be.entity.PaymentStatus;
@@ -104,7 +105,7 @@ class PaymentServiceTest {
 
     @Test
     void createPaymentFailsWhenPackageInactive() {
-        gymPackage.setActive(false);
+        gymPackage.setStatus(PackageStatus.SUSPENDED);
         when(userRepository.findById(1L)).thenReturn(Optional.of(member));
         when(packageRepository.findById(10L)).thenReturn(Optional.of(gymPackage));
 
