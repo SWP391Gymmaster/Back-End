@@ -12,6 +12,12 @@ import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+/**
+ * Service quản lý lớp tập (GymClass).
+ *
+ * Ràng buộc T5.4:
+ * - Mã lớp (classCode) phải duy nhất — kiểm tra khi tạo/sửa.
+ */
 @Service
 public class GymClassService {
 
@@ -31,26 +37,56 @@ public class GymClassService {
         this.enrollmentRepository = enrollmentRepository;
     }
 
+    // ── Queries ────────────────────────────────────────────────────────────
+
     public List<GymClass> getAll() {
         return repository.findAll();
     }
 
     public GymClass getById(Long id) {
         return repository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Class not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Class not found: id=" + id));
     }
 
+    /** T5.4 — Tra cứu theo mã lớp. */
+    public GymClass getByClassCode(String classCode) {
+        return repository.findByClassCode(classCode)
+                .orElseThrow(() -> new ResourceNotFoundException("Class not found: code=" + classCode));
+    }
+
+    // ── Commands ───────────────────────────────────────────────────────────
+
+    /**
+     * Tạo lớp mới.
+     * T5.4: kiểm tra classCode không trùng.
+     */
     @Transactional
     public GymClass create(GymClass classEntity) {
+        if (classEntity.getClassCode() == null || classEntity.getClassCode().isBlank()) {
+            throw new BusinessException("Class code must not be blank");
+        }
+        if (repository.existsByClassCode(classEntity.getClassCode())) {
+            throw new BusinessException("Class code already exists: " + classEntity.getClassCode());
+        }
         validateCoach(classEntity.getCoachId());
         return repository.save(classEntity);
     }
 
+    /**
+     * Cập nhật lớp.
+     * T5.4: kiểm tra classCode không trùng (ngoại trừ chính lớp này).
+     */
     @Transactional
     public GymClass update(Long id, GymClass classEntity) {
         GymClass existing = getById(id);
         validateCoach(classEntity.getCoachId());
         validateCapacityNotBelowCurrentEnrollments(id, classEntity.getCapacity());
+        if (classEntity.getClassCode() != null && !classEntity.getClassCode().equals(existing.getClassCode())) {
+            if (repository.existsByClassCodeIgnoreCaseAndIdNot(classEntity.getClassCode(), id)) {
+                throw new BusinessException("Class code already exists: " + classEntity.getClassCode());
+            }
+            existing.setClassCode(classEntity.getClassCode());
+        }
         existing.setName(classEntity.getName());
         existing.setSubject(classEntity.getSubject());
         existing.setDescription(classEntity.getDescription());
@@ -73,6 +109,8 @@ public class GymClassService {
         }
         repository.delete(existing);
     }
+
+    // ── Helpers ────────────────────────────────────────────────────────────
 
     private void validateCapacityNotBelowCurrentEnrollments(Long classId, Integer requestedCapacity) {
         if (requestedCapacity == null) {
