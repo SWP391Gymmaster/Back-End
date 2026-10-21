@@ -11,10 +11,11 @@ import com.swp391_be.entity.Schedule;
 import com.swp391_be.entity.User;
 import com.swp391_be.exception.BusinessException;
 import com.swp391_be.service.ClassEnrollmentService;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
+
 import java.time.Clock;
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.List;
 import java.util.concurrent.Callable;
@@ -22,6 +23,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+
 import org.junit.jupiter.api.RepeatedTest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -55,9 +57,13 @@ class ClassEnrollmentConcurrencyTest {
 
     @RepeatedTest(10)
     void concurrentLastSeatEnrollmentAllowsExactlyOneMember() throws Exception {
-        Long coachId = users.save(new User(unique("coach"), "Coach", unique("coach") + "@example.com", "hash", null, Role.COACH)).getId();
-        Long member1Id = users.save(new User(unique("member1"), "Member One", unique("member1") + "@example.com", "hash", null, Role.MEMBER)).getId();
-        Long member2Id = users.save(new User(unique("member2"), "Member Two", unique("member2") + "@example.com", "hash", null, Role.MEMBER)).getId();
+        Long coachId = users
+                .save(new User(unique("coach"), "Coach", unique("coach") + "@example.com", "hash", null, Role.COACH))
+                .getId();
+        Long member1Id = users.save(new User(unique("member1"), "Member One", unique("member1") + "@example.com",
+                "hash", null, Role.MEMBER)).getId();
+        Long member2Id = users.save(new User(unique("member2"), "Member Two", unique("member2") + "@example.com",
+                "hash", null, Role.MEMBER)).getId();
         Long classId = classes.save(new GymClass("Capacity One", "Yoga", "One seat", 1, coachId)).getId();
         Long roomId = rooms.save(new Room(unique("room"), 10, RoomType.YOGA)).getId();
         Long scheduleId = schedules.save(new Schedule(
@@ -87,7 +93,8 @@ class ClassEnrollmentConcurrencyTest {
         }
     }
 
-    private Callable<String> enrollWhenReleased(Long memberId, Long scheduleId, CountDownLatch ready, CountDownLatch start) {
+    private Callable<String> enrollWhenReleased(Long memberId, Long scheduleId, CountDownLatch ready,
+            CountDownLatch start) {
         return () -> {
             ready.countDown();
             start.await();
