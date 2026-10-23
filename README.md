@@ -2,10 +2,6 @@
 
 Back-End cho dự án SWP391 Gym Master (Spring Boot 4, Java 21, MySQL 8).
 
-Repo này được gộp từ 2 repo cá nhân, **giữ nguyên lịch sử commit**:
-- [SWP391_BE](https://github.com/huynhhuuphuocpro9-sketch/SWP391_BE): đăng ký, đăng nhập, JWT, xác thực email, quản trị tài khoản
-- [sports-center-backend](https://github.com/vduyv1011/sports-center-backend): catalog gói tập, phòng, lớp, lịch tập, đặt chỗ, thanh toán & VNPay
-
 ---
 
 ## 1. Yêu cầu môi trường & Cài đặt
@@ -30,10 +26,11 @@ Các cấu hình có thể ghi đè qua biến môi trường hoặc cấu hình
 | `SMTP_USERNAME` | *(trống)* | Email gửi |
 | `SMTP_PASSWORD` | *(trống)* | Mật khẩu ứng dụng (App Password) |
 | `MAIL_FROM` | `no-reply@example.com` | Email người gửi hiển thị |
-| `VNPAY_TMN_CODE` | `DEMO1234` | Mã website của merchant tại VNPay Sandbox |
-| `VNPAY_HASH_SECRET` | `DEMOSECRET1234...` | Khóa bí mật tạo checksum SHA-512 với VNPay |
-| `VNPAY_RETURN_URL` | `http://localhost:8080/api/vnpay/callback` | Return URL người dùng redirect về sau khi thanh toán |
-| `VNPAY_IPN_URL` | `http://localhost:8080/api/vnpay/ipn` | Webhook URL nhận kết quả server-to-server từ VNPay |
+| `PAYOS_CLIENT_ID` | `DEMO_CLIENT_ID` | Client ID từ PayOS Dashboard (https://my.payos.vn) |
+| `PAYOS_API_KEY` | `DEMO_API_KEY` | API Key kết nối cổng PayOS |
+| `PAYOS_CHECKSUM_KEY` | `DEMO_CHECKSUM_KEY` | Checksum Key dùng để xác thực chữ ký Webhook & giao dịch |
+| `PAYOS_RETURN_URL` | `http://localhost:8080/api/payos/callback` | Return URL redirect người dùng về sau khi thanh toán thành công |
+| `PAYOS_CANCEL_URL` | `http://localhost:8080/api/payos/cancel` | Cancel URL redirect người dùng về khi bấm hủy thanh toán |
 
 ---
 
@@ -129,9 +126,9 @@ Các API có ký hiệu 🔒 yêu cầu header `Authorization: Bearer <token>` (
 | POST | `/api/member/class-sessions/{scheduleId}/enrollment` | 🔒 MEMBER | Đăng ký đặt chỗ vào buổi tập |
 | DELETE | `/api/member/class-sessions/{scheduleId}/enrollment` | 🔒 MEMBER | Hủy đăng ký đặt chỗ buổi tập |
 
-### 4.6. Thanh toán & Cổng VNPay Sandbox (`/api/payments`, `/api/vnpay`)
-- Quy trình thanh toán hỗ trợ cả tiền mặt tại quầy và cổng thanh toán trực tuyến VNPay Sandbox.
-- Sau khi thanh toán thành công, hệ thống tự động sinh hóa đơn (`Invoice`) và kích hoạt/gia hạn thời gian gói tập (`MemberMembership`) cho hội viên.
+### 4.6. Thanh toán & Cổng PayOS (`/api/payments`, `/api/payos`)
+- Quy trình thanh toán hỗ trợ cả tiền mặt tại quầy (`CASH`) và cổng thanh toán trực tuyến PayOS (`PAYOS`).
+- Sau khi thanh toán thành công (qua PayOS Webhook xác thực chữ ký số), hệ thống tự động cập nhật hóa đơn (`Invoice`), thanh toán (`Payment`) sang trạng thái hoàn tất và kích hoạt/gia hạn thời gian gói tập (`MemberMembership`) cho hội viên.
 
 | Method | Đường dẫn | Quyền | Mô tả |
 |---|---|---|---|
@@ -142,10 +139,11 @@ Các API có ký hiệu 🔒 yêu cầu header `Authorization: Bearer <token>` (
 | POST | `/api/payments/cash-checkout` | 🔒 RECEPTIONIST / MANAGER | Thu tiền mặt trực tiếp tại quầy và kích hoạt gói ngay |
 | POST | `/api/payments/{id}/confirm` | 🔒 MANAGER | Xác nhận giao dịch thanh toán |
 | POST | `/api/payments/{id}/cancel` | 🔒 MANAGER | Hủy giao dịch thanh toán |
-| **POST** | `/api/vnpay/create-payment-url` | 🔒 MEMBER | **Tạo URL chuyển hướng sang cổng thanh toán VNPay** |
-| **GET** | `/api/vnpay/callback` | Public | **Return URL: VNPay redirect người dùng về sau thanh toán** |
-| **POST** | `/api/vnpay/ipn` | Public | **Webhook IPN: VNPay gọi ngầm cập nhật trạng thái đơn** |
-| **POST** | `/api/vnpay/mock-success/{paymentCode}` | 🔒 Đã đăng nhập | Giả lập thanh toán thành công (dùng cho test/demo) |
+| **POST** | `/api/payos/create-payment-link` | 🔒 MEMBER / MANAGER / RECEPTIONIST | **Tạo link thanh toán PayOS (trả về URL cổng checkout)** |
+| **POST** | `/api/payos/webhook` | Public | **Webhook PayOS: Nhận kết quả thanh toán server-to-server và xác thực chữ ký số** |
+| **GET** | `/api/payos/callback` | Public | **Return URL: PayOS redirect người dùng về sau thanh toán** |
+| **GET** | `/api/payos/cancel` | Public | **Cancel URL: PayOS redirect khi người dùng hủy giao dịch** |
+| **POST** | `/api/payos/mock-success/{orderCode}` | 🔒 Đã đăng nhập | Giả lập thanh toán thành công (dùng cho test/demo) |
 
 ---
 
@@ -160,17 +158,17 @@ $token = $login.token
 $headers = @{ Authorization = "Bearer $token" }
 ```
 
-### Bước 2: Tạo link thanh toán VNPay cho gói tập
+### Bước 2: Tạo link thanh toán PayOS cho gói tập
 ```powershell
-$vnpayReq = @{
+$payosReq = @{
   packageId = 1
-  orderInfo = "Thanh toán gói tập Gym Master"
+  description = "Thanh toan goi tap"
 } | ConvertTo-Json
 
-$payUrlRes = Invoke-RestMethod -Uri "http://localhost:8080/api/vnpay/create-payment-url" `
-  -Method Post -ContentType "application/json" -Headers $headers -Body $vnpayReq
+$payUrlRes = Invoke-RestMethod -Uri "http://localhost:8080/api/payos/create-payment-link" `
+  -Method Post -ContentType "application/json" -Headers $headers -Body $payosReq
 
-Write-Host "Mở link sau trên trình duyệt để thanh toán VNPay:"
+Write-Host "Mở link sau trên trình duyệt để thanh toán PayOS:"
 Write-Host $payUrlRes.paymentUrl
 ```
 
@@ -193,10 +191,3 @@ Dự án có đầy đủ kiểm thử đơn vị, kiểm thử tích hợp và 
 ```bash
 ./mvnw test
 ```
-
----
-
-## 7. Các tính năng mở rộng tiếp theo
-- Điểm danh hội viên tại phòng tập (Check-in / Check-out với mã QR hoặc thẻ từ).
-- Kế hoạch tập luyện cá nhân (Personal Workout Plan do Coach lập cho Member).
-- Hệ thống thông báo tự động (In-app notification / nhắc lịch tập sắp diễn ra).
