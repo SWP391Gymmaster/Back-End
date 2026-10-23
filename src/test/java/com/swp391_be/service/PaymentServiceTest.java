@@ -92,12 +92,12 @@ class PaymentServiceTest {
             return p;
         });
 
-        CreatePaymentRequest request = new CreatePaymentRequest(10L, null, PaymentMethod.VNPAY, "Mua gói online");
+        CreatePaymentRequest request = new CreatePaymentRequest(10L, null, PaymentMethod.PAYOS, "Mua gói online");
         PaymentResponse response = paymentService.createPayment(1L, request);
 
         assertThat(response).isNotNull();
         assertThat(response.getAmount()).isEqualTo(500000.0);
-        assertThat(response.getPaymentMethod()).isEqualTo(PaymentMethod.VNPAY);
+        assertThat(response.getPaymentMethod()).isEqualTo(PaymentMethod.PAYOS);
         assertThat(response.getStatus()).isEqualTo(PaymentStatus.PENDING);
         assertThat(response.getPaymentCode()).startsWith("PAY-");
         assertThat(response.getInvoiceCode()).startsWith("INV-");
@@ -109,7 +109,7 @@ class PaymentServiceTest {
         when(userRepository.findById(1L)).thenReturn(Optional.of(member));
         when(packageRepository.findById(10L)).thenReturn(Optional.of(gymPackage));
 
-        CreatePaymentRequest request = new CreatePaymentRequest(10L, null, PaymentMethod.VNPAY, null);
+        CreatePaymentRequest request = new CreatePaymentRequest(10L, null, PaymentMethod.PAYOS, null);
 
         assertThatThrownBy(() -> paymentService.createPayment(1L, request))
                 .isInstanceOf(BusinessException.class)
@@ -121,7 +121,7 @@ class PaymentServiceTest {
         User coach = new User("coach1", "Coach B", "coach@example.com", "hash", null, Role.COACH);
         when(userRepository.findById(2L)).thenReturn(Optional.of(coach));
 
-        CreatePaymentRequest request = new CreatePaymentRequest(10L, null, PaymentMethod.VNPAY, null);
+        CreatePaymentRequest request = new CreatePaymentRequest(10L, null, PaymentMethod.PAYOS, null);
 
         assertThatThrownBy(() -> paymentService.createPayment(2L, request))
                 .isInstanceOf(BusinessException.class)
@@ -184,7 +184,7 @@ class PaymentServiceTest {
     @Test
     void cancelPaymentSuccessfully() {
         Invoice invoice = new Invoice("INV-001", 1L, 10L, 500000.0, NOW, null);
-        Payment payment = new Payment("PAY-001", 100L, 1L, 500000.0, PaymentMethod.VNPAY, NOW, null);
+        Payment payment = new Payment("PAY-001", 100L, 1L, 500000.0, PaymentMethod.PAYOS, NOW, null);
 
         when(paymentRepository.findById(50L)).thenReturn(Optional.of(payment));
         when(invoiceRepository.findById(payment.getInvoiceId())).thenReturn(Optional.of(invoice));
@@ -201,7 +201,7 @@ class PaymentServiceTest {
 
     @Test
     void cancelPaymentFailsIfAlreadyCompleted() {
-        Payment payment = new Payment("PAY-001", 100L, 1L, 500000.0, PaymentMethod.VNPAY, NOW, null);
+        Payment payment = new Payment("PAY-001", 100L, 1L, 500000.0, PaymentMethod.PAYOS, NOW, null);
         payment.setStatus(PaymentStatus.COMPLETED);
 
         when(paymentRepository.findById(50L)).thenReturn(Optional.of(payment));

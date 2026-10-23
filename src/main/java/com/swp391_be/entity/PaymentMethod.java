@@ -4,6 +4,7 @@ public enum PaymentMethod {
     CASH,
     BANK_TRANSFER,
     VNPAY,
+    PAYOS,
     MOMO,
     CREDIT_CARD
 }

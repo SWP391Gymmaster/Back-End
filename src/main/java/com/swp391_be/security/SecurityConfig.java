@@ -58,10 +58,10 @@ public class SecurityConfig {
                         // Ai cũng xem được gói tập (trang chủ, trang đăng ký)
                         .requestMatchers(HttpMethod.GET, "/api/membership-packages/**").permitAll()
                         .requestMatchers("/api/member/**").hasRole("MEMBER")
-                        // Cổng thanh toán VNPay Sandbox
-                        .requestMatchers("/api/vnpay/create-payment-url").hasAnyRole("MEMBER", "MANAGER", "RECEPTIONIST")
-                        .requestMatchers("/api/vnpay/ipn", "/api/vnpay/callback").permitAll()
-                        .requestMatchers("/api/vnpay/mock-success/**").authenticated()
+                        // Cổng thanh toán PayOS
+                        .requestMatchers("/api/payos/create-payment-link").hasAnyRole("MEMBER", "MANAGER", "RECEPTIONIST")
+                        .requestMatchers("/api/payos/webhook", "/api/payos/callback", "/api/payos/cancel").permitAll()
+                        .requestMatchers("/api/payos/mock-success/**").authenticated()
                         // Quản lý hóa đơn & thanh toán cho Receptionist và Manager
                         .requestMatchers("/api/payments/**").hasAnyRole("MANAGER", "RECEPTIONIST")
                         .requestMatchers("/api/invoices/**").hasAnyRole("MANAGER", "RECEPTIONIST")

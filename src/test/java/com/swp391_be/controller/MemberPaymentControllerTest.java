@@ -2,7 +2,6 @@ package com.swp391_be.controller;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -64,7 +63,7 @@ class MemberPaymentControllerTest {
     void memberCanCheckout() throws Exception {
         PaymentResponse response = new PaymentResponse(
                 10L, "PAY-001", 20L, "INV-001", memberId, "Demo Member",
-                1L, "Gói 1 tháng", 500000.0, PaymentMethod.VNPAY,
+                1L, "Gói 1 tháng", 500000.0, PaymentMethod.PAYOS,
                 PaymentStatus.PENDING, null, Instant.now(), null, "Thanh toán");
 
         when(paymentService.createPayment(eq(memberId), any())).thenReturn(response);
@@ -75,7 +74,7 @@ class MemberPaymentControllerTest {
                         .content("""
                                 {
                                     "packageId": 1,
-                                    "paymentMethod": "VNPAY",
+                                    "paymentMethod": "PAYOS",
                                     "note": "Thanh toán"
                                 }
                                 """))
@@ -89,12 +88,12 @@ class MemberPaymentControllerTest {
     void memberCanSimulatePaymentSuccess() throws Exception {
         PaymentResponse existing = new PaymentResponse(
                 10L, "PAY-001", 20L, "INV-001", memberId, "Demo Member",
-                1L, "Gói 1 tháng", 500000.0, PaymentMethod.VNPAY,
+                1L, "Gói 1 tháng", 500000.0, PaymentMethod.PAYOS,
                 PaymentStatus.PENDING, null, Instant.now(), null, "Thanh toán");
 
         PaymentResponse completed = new PaymentResponse(
                 10L, "PAY-001", 20L, "INV-001", memberId, "Demo Member",
-                1L, "Gói 1 tháng", 500000.0, PaymentMethod.VNPAY,
+                1L, "Gói 1 tháng", 500000.0, PaymentMethod.PAYOS,
                 PaymentStatus.COMPLETED, "SIMULATED-ONLINE-TXN", Instant.now(), Instant.now(), "Thanh toán");
 
         when(paymentService.getPaymentById(10L)).thenReturn(existing);
@@ -110,7 +109,7 @@ class MemberPaymentControllerTest {
     void memberCanListOwnPayments() throws Exception {
         when(paymentService.getMyPayments(memberId)).thenReturn(List.of(new PaymentResponse(
                 10L, "PAY-001", 20L, "INV-001", memberId, "Demo Member",
-                1L, "Gói 1 tháng", 500000.0, PaymentMethod.VNPAY,
+                1L, "Gói 1 tháng", 500000.0, PaymentMethod.PAYOS,
                 PaymentStatus.COMPLETED, null, Instant.now(), Instant.now(), null)));
 
         mvc.perform(get("/api/member/payments")

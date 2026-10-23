@@ -41,7 +41,8 @@ public class AccountCreationService {
                 || phone != null && (phone.trim().length() > 30 || !phone.trim().matches("[+0-9() -]*"))) {
             throw new AccountOperationException(HttpStatus.BAD_REQUEST, "INVALID_REQUEST", "Invalid request data");
         }
-        if (users.existsByEmail(normalizedEmail)) throw new EmailAlreadyExistsException(normalizedEmail);
+        if (users.existsByEmail(normalizedEmail))
+            throw new EmailAlreadyExistsException(normalizedEmail);
         if (users.existsByUserNameIgnoreCase(normalizedUserName)) {
             throw new UserNameAlreadyExistsException(normalizedUserName);
         }
@@ -52,10 +53,12 @@ public class AccountCreationService {
     }
 
     private String normalizePhone(String phone) {
-        if (phone == null) return null;
+        if (phone == null)
+            return null;
         String value = phone.trim();
         return value.isEmpty() ? null : value;
     }
 
-    public record CreatedAccount(User user, VerificationDelivery delivery) {}
+    public record CreatedAccount(User user, VerificationDelivery delivery) {
+    }
 }
