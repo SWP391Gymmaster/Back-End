@@ -1,5 +1,6 @@
 package com.swp391_be.controller;
 
+import com.swp391_be.dto.ScheduleResponse;
 import com.swp391_be.entity.Schedule;
 import com.swp391_be.service.ScheduleService;
 import jakarta.validation.Valid;
@@ -19,7 +20,7 @@ public class ScheduleController {
 
     // GET /api/schedules?coachId=3 hoặc ?classId=1 để lọc
     @GetMapping
-    public List<Schedule> getAll(
+    public List<ScheduleResponse> getAll(
             @RequestParam(required = false) Long coachId,
             @RequestParam(required = false) Long classId) {
         if (coachId != null) {
@@ -32,8 +33,8 @@ public class ScheduleController {
     }
 
     @GetMapping("/{id}")
-    public Schedule getById(@PathVariable Long id) {
-        return service.getById(id);
+    public ScheduleResponse getById(@PathVariable Long id) {
+        return service.getResponseById(id);
     }
 
     @PostMapping

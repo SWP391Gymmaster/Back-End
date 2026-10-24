@@ -37,6 +37,8 @@ class RoomServiceTest {
 
         assertEquals(2L, result.get(0).classCount());
         assertEquals(RoomType.YOGA, result.get(0).type());
+        assertEquals(used.getRoomCode(), result.get(0).roomCode());
         assertEquals(0L, result.get(1).classCount());
+        assertEquals(empty.getRoomCode(), result.get(1).roomCode());
     }
 }

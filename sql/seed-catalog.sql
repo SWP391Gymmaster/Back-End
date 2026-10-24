@@ -64,19 +64,19 @@ WHERE @memberId IS NOT NULL
         AND start_date = CURDATE()
   );
 
--- Lop hoc (capacity <= suc chua phong). Coach phu trach mac dinh theo email (T5.4).
-INSERT INTO classes (class_code, name, subject, description, capacity, coach_id)
-SELECT t.class_code, t.name, t.subject, t.description, t.capacity, u.id FROM (
-    SELECT 'CLS-BOX-01' AS class_code, 'Boxing cơ bản' AS name, 'Boxing' AS subject, 'Lớp Boxing cho người mới' AS description, 15 AS capacity, 'coach@example.com' AS coach_email
-    UNION ALL SELECT 'CLS-BOX-02', 'Boxing nâng cao',      'Boxing',   'Sparring và kỹ thuật phối hợp đòn',       12, 'coach@example.com'
-    UNION ALL SELECT 'CLS-YOGA-01', 'Yoga Flow buổi sáng',  'Yoga',     'Yoga vinyasa nhẹ nhàng đón ngày mới',     30, 'coach.lan@example.com'
-    UNION ALL SELECT 'CLS-YOGA-02', 'Yoga thư giãn',        'Yoga',     'Yoga phục hồi, giãn cơ sau giờ làm',      30, 'coach.lan@example.com'
-    UNION ALL SELECT 'CLS-GYM-01', 'Strength & Conditioning', 'Gym',   'Tập tạ có hướng dẫn, tăng sức mạnh',      30, 'coach.minh@example.com'
-    UNION ALL SELECT 'CLS-GX-01', 'Body Pump',            'Group X',  'Tạ nhẹ theo nhạc, săn chắc toàn thân (60 phút)', 40, 'coach.trang@example.com'
-    UNION ALL SELECT 'CLS-GX-02', 'Body Combat',          'Group X',  'Võ thuật theo nhạc, đốt calo (60 phút)',  35, 'coach.trang@example.com'
-    UNION ALL SELECT 'CLS-GX-03', 'Zumba',                'Group X',  'Nhảy aerobic theo nhạc Latin',            40, 'coach.trang@example.com'
-    UNION ALL SELECT 'CLS-GX-04', 'Bums & Tums',          'Group X',  'Chuyên mông và bụng',                     30, 'coach.trang@example.com'
-    UNION ALL SELECT 'CLS-CYCLE-01', 'RPM Cycling',          'Cycling',  'Đạp xe trong nhà theo nhạc',              30, 'coach.hung@example.com'
+-- Lop hoc (capacity <= suc chua phong). Coach phu trach mac dinh theo email (T5.4, B2).
+INSERT INTO classes (class_code, name, subject, level, description, capacity, coach_id)
+SELECT t.class_code, t.name, t.subject, t.level, t.description, t.capacity, u.id FROM (
+    SELECT 'CLS-BOX-01' AS class_code, 'Boxing cơ bản' AS name, 'Boxing' AS subject, 'BEGINNER' AS level, 'Lớp Boxing cho người mới' AS description, 15 AS capacity, 'coach@example.com' AS coach_email
+    UNION ALL SELECT 'CLS-BOX-02', 'Boxing nâng cao',      'Boxing',   'ADVANCED',     'Sparring và kỹ thuật phối hợp đòn',       12, 'coach@example.com'
+    UNION ALL SELECT 'CLS-YOGA-01', 'Yoga Flow buổi sáng',  'Yoga',     'BEGINNER',     'Yoga vinyasa nhẹ nhàng đón ngày mới',     30, 'coach.lan@example.com'
+    UNION ALL SELECT 'CLS-YOGA-02', 'Yoga thư giãn',        'Yoga',     'INTERMEDIATE', 'Yoga phục hồi, giãn cơ sau giờ làm',      30, 'coach.lan@example.com'
+    UNION ALL SELECT 'CLS-GYM-01', 'Strength & Conditioning', 'Gym',   'INTERMEDIATE', 'Tập tạ có hướng dẫn, tăng sức mạnh',      30, 'coach.minh@example.com'
+    UNION ALL SELECT 'CLS-GX-01', 'Body Pump',            'Group X',  'INTERMEDIATE', 'Tạ nhẹ theo nhạc, săn chắc toàn thân (60 phút)', 40, 'coach.trang@example.com'
+    UNION ALL SELECT 'CLS-GX-02', 'Body Combat',          'Group X',  'ADVANCED',     'Võ thuật theo nhạc, đốt calo (60 phút)',  35, 'coach.trang@example.com'
+    UNION ALL SELECT 'CLS-GX-03', 'Zumba',                'Group X',  'BEGINNER',     'Nhảy aerobic theo nhạc Latin',            40, 'coach.trang@example.com'
+    UNION ALL SELECT 'CLS-GX-04', 'Bums & Tums',          'Group X',  'BEGINNER',     'Chuyên mông và bụng',                     30, 'coach.trang@example.com'
+    UNION ALL SELECT 'CLS-CYCLE-01', 'RPM Cycling',          'Cycling',  'INTERMEDIATE', 'Đạp xe trong nhà theo nhạc',              30, 'coach.hung@example.com'
 ) AS t
 JOIN users u ON u.email = t.coach_email
 WHERE NOT EXISTS (SELECT 1 FROM classes c WHERE c.class_code = t.class_code OR c.name = t.name);

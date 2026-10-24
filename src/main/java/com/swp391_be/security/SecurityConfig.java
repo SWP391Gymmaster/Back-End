@@ -57,6 +57,8 @@ public class SecurityConfig {
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         // Ai cũng xem được gói tập (trang chủ, trang đăng ký)
                         .requestMatchers(HttpMethod.GET, "/api/membership-packages/**").permitAll()
+                        // Cho khách chưa đăng nhập xem danh sách lớp, lịch tập, phòng (B3)
+                        .requestMatchers(HttpMethod.GET, "/api/classes/**", "/api/schedules/**", "/api/rooms/**").permitAll()
                         .requestMatchers("/api/member/**").hasRole("MEMBER")
                         // Cổng thanh toán PayOS
                         .requestMatchers("/api/payos/create-payment-link").hasAnyRole("MEMBER", "MANAGER", "RECEPTIONIST")

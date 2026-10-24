@@ -3,6 +3,7 @@ package com.swp391_be.entity;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
 
@@ -27,7 +28,8 @@ public class GymClass {
      * Dùng mã thay vì tên để tra cứu chính xác.
      */
     @NotBlank
-    @Size(max = 32)
+    @Size(min = 3, max = 32)
+    @Pattern(regexp = "^[A-Z0-9]+(-[A-Z0-9]+)*$")
     @Column(name = "class_code", nullable = false, unique = true, length = 32)
     private String classCode;
 
@@ -38,6 +40,11 @@ public class GymClass {
 
     /** Bộ môn: Gym, Yoga, Boxing... */
     private String subject;
+
+    /** Trình độ của lớp: BEGINNER, INTERMEDIATE, ADVANCED (cho phép để trống). */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "level", length = 20)
+    private ClassLevel level;
 
     private String description;
 
@@ -59,12 +66,24 @@ public class GymClass {
             String description,
             Integer capacity,
             Long coachId) {
+        this(classCode, name, subject, description, capacity, coachId, null);
+    }
+
+    public GymClass(
+            String classCode,
+            String name,
+            String subject,
+            String description,
+            Integer capacity,
+            Long coachId,
+            ClassLevel level) {
         this.classCode = classCode;
         this.name = name;
         this.subject = subject;
         this.description = description;
         this.capacity = capacity;
         this.coachId = coachId;
+        this.level = level;
     }
 
     // ── Backward-compat constructor (không có classCode, dùng trong test cũ) ──
@@ -74,9 +93,22 @@ public class GymClass {
             String description,
             Integer capacity,
             Long coachId) {
-        String base = (name != null && !name.isBlank()) ? name.replaceAll("\\s+", "-").toUpperCase() : "CLS";
+        this(name, subject, description, capacity, coachId, (ClassLevel) null);
+    }
+
+    public GymClass(
+            String name,
+            String subject,
+            String description,
+            Integer capacity,
+            Long coachId,
+            ClassLevel level) {
+        String base = (name != null && !name.isBlank()) ? name.replaceAll("[^a-zA-Z0-9]+", "-").replaceAll("^-+|-+$", "").toUpperCase() : "CLS";
+        if (base.isBlank()) {
+            base = "CLS";
+        }
         if (base.length() > 20) {
-            base = base.substring(0, 20);
+            base = base.substring(0, 20).replaceAll("-+$", "");
         }
         this.classCode = (base + "-" + java.util.UUID.randomUUID().toString().substring(0, 8)).toUpperCase();
         this.name = name;
@@ -84,6 +116,7 @@ public class GymClass {
         this.description = description;
         this.capacity = capacity;
         this.coachId = coachId;
+        this.level = level;
     }
 
     // ── Getters / Setters ──────────────────────────────────────────────────
@@ -114,6 +147,14 @@ public class GymClass {
 
     public void setSubject(String subject) {
         this.subject = subject;
+    }
+
+    public ClassLevel getLevel() {
+        return level;
+    }
+
+    public void setLevel(ClassLevel level) {
+        this.level = level;
     }
 
     public String getDescription() {
