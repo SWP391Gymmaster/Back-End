@@ -6,6 +6,7 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
+import java.time.LocalDate;
 
 /**
  * Lớp tập (GymClass).
@@ -47,6 +48,17 @@ public class GymClass {
     private ClassLevel level;
 
     private String description;
+
+    /**
+     * Ngày bắt đầu của cả lớp (cho phép để trống với lớp cũ).
+     * Nếu có cả hai ngày thì endDate không được trước startDate (kiểm tra trong GymClassService).
+     */
+    @Column(name = "start_date")
+    private LocalDate startDate;
+
+    /** Ngày kết thúc của cả lớp (cho phép để trống với lớp cũ). */
+    @Column(name = "end_date")
+    private LocalDate endDate;
 
     @NotNull
     @Positive
@@ -155,6 +167,22 @@ public class GymClass {
 
     public void setLevel(ClassLevel level) {
         this.level = level;
+    }
+
+    public LocalDate getStartDate() {
+        return startDate;
+    }
+
+    public void setStartDate(LocalDate startDate) {
+        this.startDate = startDate;
+    }
+
+    public LocalDate getEndDate() {
+        return endDate;
+    }
+
+    public void setEndDate(LocalDate endDate) {
+        this.endDate = endDate;
     }
 
     public String getDescription() {

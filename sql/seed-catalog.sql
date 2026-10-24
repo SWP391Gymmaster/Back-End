@@ -65,8 +65,10 @@ WHERE @memberId IS NOT NULL
   );
 
 -- Lop hoc (capacity <= suc chua phong). Coach phu trach mac dinh theo email (T5.4, B2).
-INSERT INTO classes (class_code, name, subject, level, description, capacity, coach_id)
-SELECT t.class_code, t.name, t.subject, t.level, t.description, t.capacity, u.id FROM (
+-- start_date / end_date: mỗi lớp chạy một khóa 3 tháng kể từ hôm nay (chạy migration 2026-10-25-add-class-dates.sql trước).
+INSERT INTO classes (class_code, name, subject, level, description, start_date, end_date, capacity, coach_id)
+SELECT t.class_code, t.name, t.subject, t.level, t.description,
+       CURDATE(), CURDATE() + INTERVAL 3 MONTH, t.capacity, u.id FROM (
     SELECT 'CLS-BOX-01' AS class_code, 'Boxing cơ bản' AS name, 'Boxing' AS subject, 'BEGINNER' AS level, 'Lớp Boxing cho người mới' AS description, 15 AS capacity, 'coach@example.com' AS coach_email
     UNION ALL SELECT 'CLS-BOX-02', 'Boxing nâng cao',      'Boxing',   'ADVANCED',     'Sparring và kỹ thuật phối hợp đòn',       12, 'coach@example.com'
     UNION ALL SELECT 'CLS-YOGA-01', 'Yoga Flow buổi sáng',  'Yoga',     'BEGINNER',     'Yoga vinyasa nhẹ nhàng đón ngày mới',     30, 'coach.lan@example.com'
