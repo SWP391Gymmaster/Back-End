@@ -17,4 +17,7 @@ public interface ClassEnrollmentRepository extends JpaRepository<ClassEnrollment
     List<ClassEnrollment> findByMemberIdOrderByEnrolledAtDesc(Long memberId);
 
     boolean existsByScheduleId(Long scheduleId);
+
+    @org.springframework.data.jpa.repository.Query("select e.scheduleId, count(e) from ClassEnrollment e group by e.scheduleId")
+    List<Object[]> countEnrollmentsPerSchedule();
 }

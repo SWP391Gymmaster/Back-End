@@ -1,12 +1,16 @@
 package com.swp391_be.service;
 
+import com.swp391_be.dto.ScheduleResponse;
 import com.swp391_be.entity.GymClass;
+import com.swp391_be.entity.Room;
 import com.swp391_be.entity.Schedule;
 import com.swp391_be.exception.BusinessException;
 import com.swp391_be.exception.ResourceNotFoundException;
 import com.swp391_be.repository.ClassEnrollmentRepository;
 import com.swp391_be.repository.ScheduleRepository;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -29,16 +33,22 @@ public class ScheduleService {
         this.enrollmentRepository = enrollmentRepository;
     }
 
-    public List<Schedule> getAll() {
-        return repository.findAll();
+    public List<ScheduleResponse> getAll() {
+        return toResponses(repository.findAll());
     }
 
-    public List<Schedule> getByCoach(Long coachId) {
-        return repository.findByCoachIdOrderByStartTime(coachId);
+    public List<ScheduleResponse> getByCoach(Long coachId) {
+        return toResponses(repository.findByCoachIdOrderByStartTime(coachId));
     }
 
-    public List<Schedule> getByClass(Long classId) {
-        return repository.findByClassIdOrderByStartTime(classId);
+    public List<ScheduleResponse> getByClass(Long classId) {
+        return toResponses(repository.findByClassIdOrderByStartTime(classId));
+    }
+
+    public ScheduleResponse getResponseById(Long id) {
+        Schedule schedule = getById(id);
+        long registeredCount = enrollmentRepository.countByScheduleId(id);
+        return ScheduleResponse.of(schedule, registeredCount);
     }
 
     public Schedule getById(Long id) {
@@ -77,7 +87,16 @@ public class ScheduleService {
 
         // Lớp và phòng phải tồn tại (ném 404 nếu không có)
         GymClass gymClass = classService.getById(schedule.getClassId());
-        roomService.getById(schedule.getRoomId());
+        Room room = roomService.getById(schedule.getRoomId());
+
+        // Sĩ số lớp không được lớn hơn sức chứa phòng
+        if (gymClass.getCapacity() != null && room.getCapacity() != null
+                && gymClass.getCapacity() > room.getCapacity()) {
+            throw new BusinessException("Class capacity exceeds room capacity");
+        }
+
+        // Loại phòng phải hợp bộ môn của lớp
+        validateRoomTypeMatchSubject(room, gymClass);
 
         // Không truyền coachId thì dùng Coach đang phụ trách lớp
         if (schedule.getCoachId() == null) {
@@ -107,6 +126,43 @@ public class ScheduleService {
         }
     }
 
+    private static final Map<String, java.util.Set<com.swp391_be.entity.RoomType>> SUBJECT_ALLOWED_ROOM_TYPES = Map.of(
+            "GYM", java.util.Set.of(com.swp391_be.entity.RoomType.GYM, com.swp391_be.entity.RoomType.CARDIO),
+            "YOGA", java.util.Set.of(com.swp391_be.entity.RoomType.YOGA),
+            "BOXING", java.util.Set.of(com.swp391_be.entity.RoomType.BOXING),
+            "CARDIO", java.util.Set.of(com.swp391_be.entity.RoomType.CARDIO, com.swp391_be.entity.RoomType.CYCLING),
+            "ZUMBA", java.util.Set.of(com.swp391_be.entity.RoomType.GROUP_X),
+            "PILATES", java.util.Set.of(com.swp391_be.entity.RoomType.YOGA, com.swp391_be.entity.RoomType.GROUP_X),
+            "GROUP_X", java.util.Set.of(com.swp391_be.entity.RoomType.GROUP_X),
+            "CYCLING", java.util.Set.of(com.swp391_be.entity.RoomType.CYCLING)
+    );
+
+    private void validateRoomTypeMatchSubject(Room room, GymClass gymClass) {
+        if (room.getType() == null || gymClass.getSubject() == null || gymClass.getSubject().isBlank()) {
+            return;
+        }
+        // (mọi bộ môn): OTHER luôn được phép (theo mục C3)
+        if (room.getType() == com.swp391_be.entity.RoomType.OTHER) {
+            return;
+        }
+        String normalizedSubject = gymClass.getSubject().trim().replaceAll("[\\s\\-]+", "_").toUpperCase();
+        if (normalizedSubject.equals("GROUPX")) {
+            normalizedSubject = "GROUP_X";
+        }
+
+        java.util.Set<com.swp391_be.entity.RoomType> allowedTypes = SUBJECT_ALLOWED_ROOM_TYPES.get(normalizedSubject);
+        boolean allowed;
+        if (allowedTypes != null) {
+            allowed = allowedTypes.contains(room.getType());
+        } else {
+            allowed = room.getType().name().equalsIgnoreCase(normalizedSubject);
+        }
+
+        if (!allowed) {
+            throw new BusinessException("Room type does not match class subject");
+        }
+    }
+
     private void validateTime(Schedule schedule) {
         if (schedule.getStartTime() == null
                 || schedule.getEndTime() == null) {
@@ -118,5 +174,17 @@ public class ScheduleService {
             throw new BusinessException(
                     "Start time must be before end time");
         }
+    }
+
+    private List<ScheduleResponse> toResponses(List<Schedule> list) {
+        Map<Long, Long> counts = enrollmentCounts();
+        return list.stream()
+                .map(s -> ScheduleResponse.of(s, counts.getOrDefault(s.getId(), 0L)))
+                .toList();
+    }
+
+    private Map<Long, Long> enrollmentCounts() {
+        return enrollmentRepository.countEnrollmentsPerSchedule().stream()
+                .collect(Collectors.toMap(row -> (Long) row[0], row -> (Long) row[1]));
     }
 }

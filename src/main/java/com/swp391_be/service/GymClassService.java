@@ -89,6 +89,7 @@ public class GymClassService {
         }
         existing.setName(classEntity.getName());
         existing.setSubject(classEntity.getSubject());
+        existing.setLevel(classEntity.getLevel());
         existing.setDescription(classEntity.getDescription());
         existing.setCapacity(classEntity.getCapacity());
         existing.setCoachId(classEntity.getCoachId());

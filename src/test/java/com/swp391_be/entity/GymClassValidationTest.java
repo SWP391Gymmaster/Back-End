@@ -17,4 +17,18 @@ class GymClassValidationTest {
         assertThat(validator.validate(gymClass))
                 .anyMatch(violation -> violation.getPropertyPath().toString().equals("capacity"));
     }
+
+    @Test
+    void classCodeValidationRejectsLowerCaseAndInvalidCharacters() {
+        GymClass lowercaseCode = new GymClass("cls-yoga-01", "Yoga", "Yoga", "Desc", 30, 3L);
+        assertThat(validator.validate(lowercaseCode))
+                .anyMatch(v -> v.getPropertyPath().toString().equals("classCode"));
+
+        GymClass shortCode = new GymClass("AB", "Yoga", "Yoga", "Desc", 30, 3L);
+        assertThat(validator.validate(shortCode))
+                .anyMatch(v -> v.getPropertyPath().toString().equals("classCode"));
+
+        GymClass validCode = new GymClass("CLS-YOGA-01", "Yoga", "Yoga", "Desc", 30, 3L);
+        assertThat(validator.validate(validCode)).isEmpty();
+    }
 }

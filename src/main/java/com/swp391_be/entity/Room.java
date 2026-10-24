@@ -3,6 +3,7 @@ package com.swp391_be.entity;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
 
@@ -28,7 +29,8 @@ public class Room {
      * Dùng mã thay vì tên để tra cứu chính xác.
      */
     @NotBlank
-    @Size(max = 32)
+    @Size(min = 3, max = 32)
+    @Pattern(regexp = "^[A-Z0-9]+(-[A-Z0-9]+)*$")
     @Column(name = "room_code", nullable = false, unique = true, length = 32)
     private String roomCode;
 
@@ -56,9 +58,12 @@ public class Room {
 
     // ── Backward-compat constructor (không có roomCode, dùng trong test cũ) ──
     public Room(String name, Integer capacity, RoomType type) {
-        String base = (name != null && !name.isBlank()) ? name.replaceAll("\\s+", "-").toUpperCase() : "ROOM";
+        String base = (name != null && !name.isBlank()) ? name.replaceAll("[^a-zA-Z0-9]+", "-").replaceAll("^-+|-+$", "").toUpperCase() : "ROOM";
+        if (base.isBlank()) {
+            base = "ROOM";
+        }
         if (base.length() > 20) {
-            base = base.substring(0, 20);
+            base = base.substring(0, 20).replaceAll("-+$", "");
         }
         this.roomCode = (base + "-" + java.util.UUID.randomUUID().toString().substring(0, 8)).toUpperCase();
         this.name = name;
