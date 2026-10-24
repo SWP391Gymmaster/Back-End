@@ -68,6 +68,7 @@ public class GymClassService {
         if (repository.existsByClassCode(classEntity.getClassCode())) {
             throw new BusinessException("Class code already exists: " + classEntity.getClassCode());
         }
+        validateDates(classEntity);
         validateCoach(classEntity.getCoachId());
         return repository.save(classEntity);
     }
@@ -79,6 +80,7 @@ public class GymClassService {
     @Transactional
     public GymClass update(Long id, GymClass classEntity) {
         GymClass existing = getById(id);
+        validateDates(classEntity);
         validateCoach(classEntity.getCoachId());
         validateCapacityNotBelowCurrentEnrollments(id, classEntity.getCapacity());
         if (classEntity.getClassCode() != null && !classEntity.getClassCode().equals(existing.getClassCode())) {
@@ -91,6 +93,8 @@ public class GymClassService {
         existing.setSubject(classEntity.getSubject());
         existing.setLevel(classEntity.getLevel());
         existing.setDescription(classEntity.getDescription());
+        existing.setStartDate(classEntity.getStartDate());
+        existing.setEndDate(classEntity.getEndDate());
         existing.setCapacity(classEntity.getCapacity());
         existing.setCoachId(classEntity.getCoachId());
         return repository.save(existing);
@@ -112,6 +116,14 @@ public class GymClassService {
     }
 
     // ── Helpers ────────────────────────────────────────────────────────────
+
+    // Ngày kết thúc không được trước ngày bắt đầu (cho phép bỏ trống một hoặc cả hai ngày)
+    private void validateDates(GymClass classEntity) {
+        if (classEntity.getStartDate() != null && classEntity.getEndDate() != null
+                && classEntity.getEndDate().isBefore(classEntity.getStartDate())) {
+            throw new BusinessException("End date must not be before start date");
+        }
+    }
 
     private void validateCapacityNotBelowCurrentEnrollments(Long classId, Integer requestedCapacity) {
         if (requestedCapacity == null) {

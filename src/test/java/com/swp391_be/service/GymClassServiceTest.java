@@ -1,5 +1,6 @@
 package com.swp391_be.service;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -13,6 +14,7 @@ import com.swp391_be.repository.ClassEnrollmentRepository;
 import com.swp391_be.repository.GymClassRepository;
 import com.swp391_be.repository.ScheduleRepository;
 import com.swp391_be.repository.UserRepository;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -71,6 +73,62 @@ class GymClassServiceTest {
         assertThatThrownBy(() -> service.update(20L, update))
                 .isInstanceOf(BusinessException.class)
                 .hasMessage("Capacity cannot be lower than current enrollment count");
+        verify(classes, never()).save(existing);
+    }
+
+    @Test
+    void cannotCreateClassWhenEndDateIsBeforeStartDate() {
+        GymClass gymClass = new GymClass("Yoga", "Yoga", "Desc", 5, 3L);
+        gymClass.setStartDate(LocalDate.of(2026, 11, 10));
+        gymClass.setEndDate(LocalDate.of(2026, 11, 9));
+
+        assertThatThrownBy(() -> service.create(gymClass))
+                .isInstanceOf(BusinessException.class)
+                .hasMessage("End date must not be before start date");
+        verify(classes, never()).save(gymClass);
+    }
+
+    @Test
+    void createClassAllowsSameDayOrMissingDates() {
+        GymClass sameDay = new GymClass("Yoga", "Yoga", "Desc", 5, 3L);
+        sameDay.setStartDate(LocalDate.of(2026, 11, 10));
+        sameDay.setEndDate(LocalDate.of(2026, 11, 10));
+        GymClass noDates = new GymClass("Boxing", "Boxing", "Desc", 5, 3L);
+        when(users.existsByIdAndRole(3L, Role.COACH)).thenReturn(true);
+        when(classes.save(sameDay)).thenReturn(sameDay);
+        when(classes.save(noDates)).thenReturn(noDates);
+
+        assertThat(service.create(sameDay).getEndDate()).isEqualTo(LocalDate.of(2026, 11, 10));
+        assertThat(service.create(noDates).getStartDate()).isNull();
+    }
+
+    @Test
+    void updateCopiesStartAndEndDate() {
+        GymClass existing = new GymClass("Yoga", "Yoga", "Desc", 5, 3L);
+        GymClass update = new GymClass("Yoga", "Yoga", "Desc", 5, 3L);
+        update.setStartDate(LocalDate.of(2026, 11, 1));
+        update.setEndDate(LocalDate.of(2026, 12, 31));
+        when(classes.findById(20L)).thenReturn(Optional.of(existing));
+        when(users.existsByIdAndRole(3L, Role.COACH)).thenReturn(true);
+        when(classes.save(existing)).thenReturn(existing);
+
+        GymClass saved = service.update(20L, update);
+
+        assertThat(saved.getStartDate()).isEqualTo(LocalDate.of(2026, 11, 1));
+        assertThat(saved.getEndDate()).isEqualTo(LocalDate.of(2026, 12, 31));
+    }
+
+    @Test
+    void cannotUpdateClassWhenEndDateIsBeforeStartDate() {
+        GymClass existing = new GymClass("Yoga", "Yoga", "Desc", 5, 3L);
+        GymClass update = new GymClass("Yoga", "Yoga", "Desc", 5, 3L);
+        update.setStartDate(LocalDate.of(2026, 12, 1));
+        update.setEndDate(LocalDate.of(2026, 11, 1));
+        when(classes.findById(20L)).thenReturn(Optional.of(existing));
+
+        assertThatThrownBy(() -> service.update(20L, update))
+                .isInstanceOf(BusinessException.class)
+                .hasMessage("End date must not be before start date");
         verify(classes, never()).save(existing);
     }
 
