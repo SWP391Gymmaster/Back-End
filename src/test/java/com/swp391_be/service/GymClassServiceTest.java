@@ -103,11 +103,13 @@ class GymClassServiceTest {
     }
 
     @Test
-    void updateCopiesStartAndEndDate() {
+    void updateCopiesClassAndRegistrationDates() {
         GymClass existing = new GymClass("Yoga", "Yoga", "Desc", 5, 3L);
         GymClass update = new GymClass("Yoga", "Yoga", "Desc", 5, 3L);
         update.setStartDate(LocalDate.of(2026, 11, 1));
         update.setEndDate(LocalDate.of(2026, 12, 31));
+        update.setRegistrationOpenAt(LocalDate.of(2026, 10, 1));
+        update.setRegistrationCloseAt(LocalDate.of(2026, 10, 15));
         when(classes.findById(20L)).thenReturn(Optional.of(existing));
         when(users.existsByIdAndRole(3L, Role.COACH)).thenReturn(true);
         when(classes.save(existing)).thenReturn(existing);
@@ -116,6 +118,20 @@ class GymClassServiceTest {
 
         assertThat(saved.getStartDate()).isEqualTo(LocalDate.of(2026, 11, 1));
         assertThat(saved.getEndDate()).isEqualTo(LocalDate.of(2026, 12, 31));
+        assertThat(saved.getRegistrationOpenAt()).isEqualTo(LocalDate.of(2026, 10, 1));
+        assertThat(saved.getRegistrationCloseAt()).isEqualTo(LocalDate.of(2026, 10, 15));
+    }
+
+    @Test
+    void rejectsRegistrationCloseBeforeOpen() {
+        GymClass gymClass = new GymClass("Yoga", "Yoga", "Desc", 5, 3L);
+        gymClass.setRegistrationOpenAt(LocalDate.of(2026, 10, 2));
+        gymClass.setRegistrationCloseAt(LocalDate.of(2026, 10, 1));
+
+        assertThatThrownBy(() -> service.create(gymClass))
+                .isInstanceOf(BusinessException.class)
+                .hasMessage("Registration close date must not be before registration open date");
+        verify(classes, never()).save(gymClass);
     }
 
     @Test

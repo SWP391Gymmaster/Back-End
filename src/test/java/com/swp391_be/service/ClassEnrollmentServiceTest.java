@@ -20,6 +20,7 @@ import com.swp391_be.repository.GymClassRepository;
 import com.swp391_be.repository.ScheduleRepository;
 import java.time.Clock;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.List;
@@ -79,6 +80,63 @@ class ClassEnrollmentServiceTest {
         assertThat(response.classId()).isEqualTo(CLASS_ID);
         assertThat(response.className()).isEqualTo("Yoga");
         assertThat(response.enrolledAt()).isEqualTo(NOW_INSTANT);
+    }
+
+    @Test
+    void rejectsBeforeRegistrationOpensAndAfterClassEnds() {
+        GymClass gymClass = gymClass(2);
+        when(schedules.findByIdForUpdate(SCHEDULE_ID)).thenReturn(Optional.of(futureSchedule(SCHEDULE_ID, CLASS_ID)));
+        when(classes.findById(CLASS_ID)).thenReturn(Optional.of(gymClass));
+        gymClass.setRegistrationOpenAt(LocalDate.of(2026, 9, 30));
+
+        assertThatThrownBy(() -> service.enroll(MEMBER_ID, SCHEDULE_ID))
+                .isInstanceOf(BusinessException.class)
+                .hasMessage("Class registration is not open");
+
+        gymClass.setRegistrationOpenAt(null);
+        gymClass.setEndDate(LocalDate.of(2026, 9, 28));
+        assertThatThrownBy(() -> service.enroll(MEMBER_ID, SCHEDULE_ID))
+                .isInstanceOf(BusinessException.class)
+                .hasMessage("Class registration is not open");
+        verify(enrollments, never()).saveAndFlush(any());
+    }
+
+    @Test
+    void allowsRegistrationOnOpenAndEndDateAfterEarlyRegistrationCloses() {
+        GymClass gymClass = gymClass(2);
+        gymClass.setRegistrationOpenAt(LocalDate.of(2026, 9, 29));
+        gymClass.setRegistrationCloseAt(LocalDate.of(2026, 9, 29));
+        gymClass.setEndDate(LocalDate.of(2026, 9, 29));
+        when(schedules.findByIdForUpdate(SCHEDULE_ID)).thenReturn(Optional.of(futureSchedule(SCHEDULE_ID, CLASS_ID)));
+        when(classes.findById(CLASS_ID)).thenReturn(Optional.of(gymClass));
+        when(enrollments.saveAndFlush(any(ClassEnrollment.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        assertThat(service.enroll(MEMBER_ID, SCHEDULE_ID).scheduleId()).isEqualTo(SCHEDULE_ID);
+        gymClass.setRegistrationOpenAt(LocalDate.of(2026, 9, 28));
+        gymClass.setRegistrationCloseAt(LocalDate.of(2026, 9, 28));
+        assertThat(service.enroll(MEMBER_ID, SCHEDULE_ID).scheduleId()).isEqualTo(SCHEDULE_ID);
+    }
+
+    @Test
+    void availableSessionsRespectRegistrationDates() {
+        GymClass gymClass = gymClass(2);
+        when(schedules.findByStartTimeAfterOrderByStartTime(any(LocalDateTime.class)))
+                .thenReturn(List.of(futureSchedule(SCHEDULE_ID, CLASS_ID)));
+        when(classes.findById(CLASS_ID)).thenReturn(Optional.of(gymClass));
+        gymClass.setRegistrationOpenAt(LocalDate.of(2026, 9, 30));
+        assertThat(service.getAvailableSessions(MEMBER_ID)).isEmpty();
+
+        gymClass.setRegistrationOpenAt(LocalDate.of(2026, 9, 29));
+        gymClass.setRegistrationCloseAt(LocalDate.of(2026, 9, 29));
+        gymClass.setEndDate(LocalDate.of(2026, 9, 29));
+        assertThat(service.getAvailableSessions(MEMBER_ID)).hasSize(1);
+
+        gymClass.setRegistrationOpenAt(LocalDate.of(2026, 9, 28));
+        gymClass.setRegistrationCloseAt(LocalDate.of(2026, 9, 28));
+        assertThat(service.getAvailableSessions(MEMBER_ID)).hasSize(1);
+
+        gymClass.setEndDate(LocalDate.of(2026, 9, 28));
+        assertThat(service.getAvailableSessions(MEMBER_ID)).isEmpty();
     }
 
     @Test

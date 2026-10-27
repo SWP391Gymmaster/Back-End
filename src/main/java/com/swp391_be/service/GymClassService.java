@@ -95,6 +95,8 @@ public class GymClassService {
         existing.setDescription(classEntity.getDescription());
         existing.setStartDate(classEntity.getStartDate());
         existing.setEndDate(classEntity.getEndDate());
+        existing.setRegistrationOpenAt(classEntity.getRegistrationOpenAt());
+        existing.setRegistrationCloseAt(classEntity.getRegistrationCloseAt());
         existing.setCapacity(classEntity.getCapacity());
         existing.setCoachId(classEntity.getCoachId());
         return repository.save(existing);
@@ -122,6 +124,10 @@ public class GymClassService {
         if (classEntity.getStartDate() != null && classEntity.getEndDate() != null
                 && classEntity.getEndDate().isBefore(classEntity.getStartDate())) {
             throw new BusinessException("End date must not be before start date");
+        }
+        if (classEntity.getRegistrationOpenAt() != null && classEntity.getRegistrationCloseAt() != null
+                && classEntity.getRegistrationCloseAt().isBefore(classEntity.getRegistrationOpenAt())) {
+            throw new BusinessException("Registration close date must not be before registration open date");
         }
     }
 

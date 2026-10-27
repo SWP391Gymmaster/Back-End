@@ -12,6 +12,7 @@ import com.swp391_be.repository.GymClassRepository;
 import com.swp391_be.repository.ScheduleRepository;
 import java.time.Clock;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -59,6 +60,9 @@ public class ClassEnrollmentService {
         }
         GymClass gymClass = classes.findById(schedule.getClassId())
                 .orElseThrow(() -> new ResourceNotFoundException("Class not found"));
+        if (!registrationAllowed(gymClass, LocalDate.now(clock))) {
+            throw new BusinessException("Class registration is not open");
+        }
         membershipService.requireValidForSession(memberId, schedule.getStartTime().toLocalDate());
         if (enrollments.existsByMemberIdAndScheduleId(memberId, scheduleId)) {
             throw new BusinessException("Already enrolled in this class session");
@@ -106,6 +110,9 @@ public class ClassEnrollmentService {
     private Optional<AvailableClassSessionResponse> availableResponse(Long memberId, Schedule schedule) {
         GymClass gymClass = classes.findById(schedule.getClassId())
                 .orElseThrow(() -> new ResourceNotFoundException("Class not found"));
+        if (!registrationAllowed(gymClass, LocalDate.now(clock))) {
+            return Optional.empty();
+        }
         long registered = enrollments.countByScheduleId(schedule.getId());
         long remaining = Math.max(0L, gymClass.getCapacity() - registered);
         if (remaining == 0) {
@@ -124,6 +131,11 @@ public class ClassEnrollmentService {
                 registered,
                 remaining,
                 enrollments.existsByMemberIdAndScheduleId(memberId, schedule.getId())));
+    }
+
+    private boolean registrationAllowed(GymClass gymClass, LocalDate today) {
+        return (gymClass.getRegistrationOpenAt() == null || !today.isBefore(gymClass.getRegistrationOpenAt()))
+                && (gymClass.getEndDate() == null || !today.isAfter(gymClass.getEndDate()));
     }
 
     private ClassEnrollmentResponse toResponse(ClassEnrollment enrollment, Schedule schedule, GymClass gymClass) {

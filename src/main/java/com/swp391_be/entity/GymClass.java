@@ -60,6 +60,12 @@ public class GymClass {
     @Column(name = "end_date")
     private LocalDate endDate;
 
+    @Column(name = "registration_open_at")
+    private LocalDate registrationOpenAt;
+
+    @Column(name = "registration_close_at")
+    private LocalDate registrationCloseAt;
+
     @NotNull
     @Positive
     @Column(nullable = false)
@@ -183,6 +189,22 @@ public class GymClass {
 
     public void setEndDate(LocalDate endDate) {
         this.endDate = endDate;
+    }
+
+    public LocalDate getRegistrationOpenAt() {
+        return registrationOpenAt;
+    }
+
+    public void setRegistrationOpenAt(LocalDate registrationOpenAt) {
+        this.registrationOpenAt = registrationOpenAt;
+    }
+
+    public LocalDate getRegistrationCloseAt() {
+        return registrationCloseAt;
+    }
+
+    public void setRegistrationCloseAt(LocalDate registrationCloseAt) {
+        this.registrationCloseAt = registrationCloseAt;
     }
 
     public String getDescription() {
