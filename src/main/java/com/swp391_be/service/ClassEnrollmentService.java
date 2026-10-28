@@ -18,6 +18,7 @@ import java.util.Optional;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.swp391_be.repository.ClassRegistrationRepository;
 
 @Service
 public class ClassEnrollmentService {
@@ -27,16 +28,19 @@ public class ClassEnrollmentService {
     private final ClassEnrollmentRepository enrollments;
     private final MemberMembershipService membershipService;
     private final Clock clock;
+    private final ClassRegistrationRepository registrations;
 
     public ClassEnrollmentService(
             ScheduleRepository schedules,
             GymClassRepository classes,
             ClassEnrollmentRepository enrollments,
+            ClassRegistrationRepository registrations,
             MemberMembershipService membershipService,
             Clock clock) {
         this.schedules = schedules;
         this.classes = classes;
         this.enrollments = enrollments;
+        this.registrations = registrations;
         this.membershipService = membershipService;
         this.clock = clock;
     }
@@ -59,6 +63,15 @@ public class ClassEnrollmentService {
         }
         GymClass gymClass = classes.findById(schedule.getClassId())
                 .orElseThrow(() -> new ResourceNotFoundException("Class not found"));
+        if (!registrationAllowed(gymClass, LocalDateTime.now(clock))) {
+            throw new BusinessException("Class registration is not open");
+        }
+        if (!gymClass.acceptsSessionEnrollmentAt(LocalDateTime.now(clock))) {
+            throw new BusinessException("Class session registration is not open yet");
+        }
+        if (!registrations.existsByMemberIdAndClassId(memberId, schedule.getClassId())) {
+            throw new BusinessException("Not registered in this class");
+        }
         membershipService.requireValidForSession(memberId, schedule.getStartTime().toLocalDate());
         if (enrollments.existsByMemberIdAndScheduleId(memberId, scheduleId)) {
             throw new BusinessException("Already enrolled in this class session");
@@ -106,6 +119,12 @@ public class ClassEnrollmentService {
     private Optional<AvailableClassSessionResponse> availableResponse(Long memberId, Schedule schedule) {
         GymClass gymClass = classes.findById(schedule.getClassId())
                 .orElseThrow(() -> new ResourceNotFoundException("Class not found"));
+        if (!registrationAllowed(gymClass, LocalDateTime.now(clock))) {
+            return Optional.empty();
+        }
+        if (!gymClass.acceptsSessionEnrollmentAt(LocalDateTime.now(clock))) {
+            return Optional.empty();
+        }
         long registered = enrollments.countByScheduleId(schedule.getId());
         long remaining = Math.max(0L, gymClass.getCapacity() - registered);
         if (remaining == 0) {
@@ -124,6 +143,10 @@ public class ClassEnrollmentService {
                 registered,
                 remaining,
                 enrollments.existsByMemberIdAndScheduleId(memberId, schedule.getId())));
+    }
+
+    private boolean registrationAllowed(GymClass gymClass, LocalDateTime now) {
+        return gymClass.acceptsRegistrationAt(now);
     }
 
     private ClassEnrollmentResponse toResponse(ClassEnrollment enrollment, Schedule schedule, GymClass gymClass) {

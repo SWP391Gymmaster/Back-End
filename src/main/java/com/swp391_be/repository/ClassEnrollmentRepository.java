@@ -4,6 +4,7 @@ import com.swp391_be.entity.ClassEnrollment;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
+import java.util.Collection;
 
 public interface ClassEnrollmentRepository extends JpaRepository<ClassEnrollment, Long> {
     boolean existsByMemberId(Long memberId);
@@ -17,6 +18,8 @@ public interface ClassEnrollmentRepository extends JpaRepository<ClassEnrollment
     List<ClassEnrollment> findByMemberIdOrderByEnrolledAtDesc(Long memberId);
 
     boolean existsByScheduleId(Long scheduleId);
+
+    void deleteByMemberIdAndScheduleIdIn(Long memberId, Collection<Long> scheduleIds);
 
     @org.springframework.data.jpa.repository.Query("select e.scheduleId, count(e) from ClassEnrollment e group by e.scheduleId")
     List<Object[]> countEnrollmentsPerSchedule();

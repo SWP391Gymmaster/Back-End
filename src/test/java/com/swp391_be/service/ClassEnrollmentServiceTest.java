@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -16,10 +17,12 @@ import com.swp391_be.entity.Schedule;
 import com.swp391_be.exception.BusinessException;
 import com.swp391_be.exception.ResourceNotFoundException;
 import com.swp391_be.repository.ClassEnrollmentRepository;
+import com.swp391_be.repository.ClassRegistrationRepository;
 import com.swp391_be.repository.GymClassRepository;
 import com.swp391_be.repository.ScheduleRepository;
 import java.time.Clock;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.List;
@@ -49,6 +52,9 @@ class ClassEnrollmentServiceTest {
     private ClassEnrollmentRepository enrollments;
 
     @Mock
+    private ClassRegistrationRepository registrations;
+
+    @Mock
     private MemberMembershipService membershipService;
 
     private ClassEnrollmentService service;
@@ -59,8 +65,10 @@ class ClassEnrollmentServiceTest {
                 schedules,
                 classes,
                 enrollments,
+                registrations,
                 membershipService,
                 Clock.fixed(NOW_INSTANT, ZONE));
+        lenient().when(registrations.existsByMemberIdAndClassId(any(), any())).thenReturn(true);
     }
 
     @Test
@@ -86,7 +94,8 @@ class ClassEnrollmentServiceTest {
         Schedule schedule = futureSchedule(SCHEDULE_ID, CLASS_ID);
         when(schedules.findByIdForUpdate(SCHEDULE_ID)).thenReturn(Optional.of(schedule));
         when(classes.findById(CLASS_ID)).thenReturn(Optional.of(gymClass(2)));
-        org.mockito.Mockito.doThrow(new BusinessException("Membership package is expired or does not cover this class session"))
+        org.mockito.Mockito
+                .doThrow(new BusinessException("Membership package is expired or does not cover this class session"))
                 .when(membershipService)
                 .requireValidForSession(MEMBER_ID, schedule.getStartTime().toLocalDate());
 
@@ -120,6 +129,32 @@ class ClassEnrollmentServiceTest {
         assertThatThrownBy(() -> service.enroll(MEMBER_ID, SCHEDULE_ID))
                 .isInstanceOf(BusinessException.class)
                 .hasMessage("Already enrolled in this class session");
+        verify(enrollments, never()).saveAndFlush(any());
+    }
+
+    @Test
+    void rejectsSessionEnrollmentDuringEarlyRegistration() {
+        GymClass gymClass = gymClass(2);
+        gymClass.setRegistrationOpenAt(LocalDate.of(2026, 9, 28).atStartOfDay());
+        gymClass.setRegistrationCloseAt(LocalDate.of(2026, 9, 29).atTime(23, 0)); // hiện tại 29/09 07:00, chưa đóng
+        when(schedules.findByIdForUpdate(SCHEDULE_ID)).thenReturn(Optional.of(futureSchedule(SCHEDULE_ID, CLASS_ID)));
+        when(classes.findById(CLASS_ID)).thenReturn(Optional.of(gymClass));
+
+        assertThatThrownBy(() -> service.enroll(MEMBER_ID, SCHEDULE_ID))
+                .isInstanceOf(BusinessException.class)
+                .hasMessage("Class session registration is not open yet");
+        verify(enrollments, never()).saveAndFlush(any());
+    }
+
+    @Test
+    void rejectsWhenNotRegisteredInClass() {
+        when(schedules.findByIdForUpdate(SCHEDULE_ID)).thenReturn(Optional.of(futureSchedule(SCHEDULE_ID, CLASS_ID)));
+        when(classes.findById(CLASS_ID)).thenReturn(Optional.of(gymClass(2)));
+        when(registrations.existsByMemberIdAndClassId(MEMBER_ID, CLASS_ID)).thenReturn(false);
+
+        assertThatThrownBy(() -> service.enroll(MEMBER_ID, SCHEDULE_ID))
+                .isInstanceOf(BusinessException.class)
+                .hasMessage("Not registered in this class");
         verify(enrollments, never()).saveAndFlush(any());
     }
 
@@ -213,7 +248,8 @@ class ClassEnrollmentServiceTest {
     void rejectsCancellationWhenMembershipExpired() {
         Schedule schedule = futureSchedule(SCHEDULE_ID, CLASS_ID);
         when(schedules.findByIdForUpdate(SCHEDULE_ID)).thenReturn(Optional.of(schedule));
-        org.mockito.Mockito.doThrow(new BusinessException("Membership package is expired or does not cover this class session"))
+        org.mockito.Mockito
+                .doThrow(new BusinessException("Membership package is expired or does not cover this class session"))
                 .when(membershipService)
                 .requireValidForSession(MEMBER_ID, schedule.getStartTime().toLocalDate());
 
