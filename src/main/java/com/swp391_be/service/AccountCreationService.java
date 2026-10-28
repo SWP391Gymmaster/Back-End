@@ -10,7 +10,6 @@ import java.util.Locale;
 import java.nio.charset.StandardCharsets;
 import com.swp391_be.exception.AccountOperationException;
 import org.springframework.http.HttpStatus;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;

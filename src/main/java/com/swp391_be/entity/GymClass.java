@@ -7,17 +7,18 @@ import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 /**
  * Lớp tập (GymClass).
  * Mỗi lớp được nhận dạng bằng mã (classCode) duy nhất, ví dụ: CLS-BOXING-BASIC.
  * Mã lớp dùng thay tên để tránh sai sót khi tra cứu và liên kết.
  *
- * Đổi tên từ "Class" để không trùng với java.lang.Class. Tên bảng vẫn là "classes".
+ * Đổi tên từ "Class" để không trùng với java.lang.Class. Tên bảng vẫn là
+ * "classes".
  */
 @Entity
-@Table(name = "classes",
-        uniqueConstraints = @UniqueConstraint(name = "uk_class_code", columnNames = "class_code"))
+@Table(name = "classes", uniqueConstraints = @UniqueConstraint(name = "uk_class_code", columnNames = "class_code"))
 public class GymClass {
 
     @Id
@@ -49,23 +50,6 @@ public class GymClass {
 
     private String description;
 
-    /**
-     * Ngày bắt đầu của cả lớp (cho phép để trống với lớp cũ).
-     * Nếu có cả hai ngày thì endDate không được trước startDate (kiểm tra trong GymClassService).
-     */
-    @Column(name = "start_date")
-    private LocalDate startDate;
-
-    /** Ngày kết thúc của cả lớp (cho phép để trống với lớp cũ). */
-    @Column(name = "end_date")
-    private LocalDate endDate;
-
-    @Column(name = "registration_open_at")
-    private LocalDate registrationOpenAt;
-
-    @Column(name = "registration_close_at")
-    private LocalDate registrationCloseAt;
-
     @NotNull
     @Positive
     @Column(nullable = false)
@@ -73,6 +57,20 @@ public class GymClass {
 
     /** Coach phụ trách lớp (id trong bảng users, role = COACH). */
     private Long coachId;
+
+    /** Ngày bắt đầu / kết thúc lớp (chỉ có ngày). */
+    @Column(name = "start_date")
+    private LocalDate startDate;
+
+    @Column(name = "end_date")
+    private LocalDate endDate;
+
+    /** Thời gian đăng ký sớm (có giờ). */
+    @Column(name = "registration_open_at")
+    private LocalDateTime registrationOpenAt;
+
+    @Column(name = "registration_close_at")
+    private LocalDateTime registrationCloseAt;
 
     public GymClass() {
     }
@@ -121,7 +119,9 @@ public class GymClass {
             Integer capacity,
             Long coachId,
             ClassLevel level) {
-        String base = (name != null && !name.isBlank()) ? name.replaceAll("[^a-zA-Z0-9]+", "-").replaceAll("^-+|-+$", "").toUpperCase() : "CLS";
+        String base = (name != null && !name.isBlank())
+                ? name.replaceAll("[^a-zA-Z0-9]+", "-").replaceAll("^-+|-+$", "").toUpperCase()
+                : "CLS";
         if (base.isBlank()) {
             base = "CLS";
         }
@@ -175,38 +175,6 @@ public class GymClass {
         this.level = level;
     }
 
-    public LocalDate getStartDate() {
-        return startDate;
-    }
-
-    public void setStartDate(LocalDate startDate) {
-        this.startDate = startDate;
-    }
-
-    public LocalDate getEndDate() {
-        return endDate;
-    }
-
-    public void setEndDate(LocalDate endDate) {
-        this.endDate = endDate;
-    }
-
-    public LocalDate getRegistrationOpenAt() {
-        return registrationOpenAt;
-    }
-
-    public void setRegistrationOpenAt(LocalDate registrationOpenAt) {
-        this.registrationOpenAt = registrationOpenAt;
-    }
-
-    public LocalDate getRegistrationCloseAt() {
-        return registrationCloseAt;
-    }
-
-    public void setRegistrationCloseAt(LocalDate registrationCloseAt) {
-        this.registrationCloseAt = registrationCloseAt;
-    }
-
     public String getDescription() {
         return description;
     }
@@ -229,5 +197,54 @@ public class GymClass {
 
     public void setCoachId(Long coachId) {
         this.coachId = coachId;
+    }
+
+    public LocalDate getStartDate() {
+        return startDate;
+    }
+
+    public void setStartDate(LocalDate startDate) {
+        this.startDate = startDate;
+    }
+
+    public LocalDate getEndDate() {
+        return endDate;
+    }
+
+    public void setEndDate(LocalDate endDate) {
+        this.endDate = endDate;
+    }
+
+    public LocalDateTime getRegistrationOpenAt() {
+        return registrationOpenAt;
+    }
+
+    public void setRegistrationOpenAt(LocalDateTime registrationOpenAt) {
+        this.registrationOpenAt = registrationOpenAt;
+    }
+
+    public LocalDateTime getRegistrationCloseAt() {
+        return registrationCloseAt;
+    }
+
+    public void setRegistrationCloseAt(LocalDateTime registrationCloseAt) {
+        this.registrationCloseAt = registrationCloseAt;
+    }
+
+    /**
+     * Cho phép đăng ký tại thời điểm now (giờ Việt Nam): từ giờ mở đăng ký sớm đến
+     * hết ngày kết thúc lớp.
+     */
+    public boolean acceptsRegistrationAt(LocalDateTime now) {
+        return (registrationOpenAt == null || !now.isBefore(registrationOpenAt))
+                && (endDate == null || !now.toLocalDate().isAfter(endDate));
+    }
+
+    /**
+     * Cho phép đăng ký BUỔI HỌC tại thời điểm now: lớp nhận đăng ký và đăng ký sớm
+     * đã kết thúc.
+     */
+    public boolean acceptsSessionEnrollmentAt(LocalDateTime now) {
+        return acceptsRegistrationAt(now) && (registrationCloseAt == null || !now.isBefore(registrationCloseAt));
     }
 }

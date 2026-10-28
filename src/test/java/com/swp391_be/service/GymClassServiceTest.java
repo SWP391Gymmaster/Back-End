@@ -11,11 +11,15 @@ import com.swp391_be.entity.Role;
 import com.swp391_be.entity.Schedule;
 import com.swp391_be.exception.BusinessException;
 import com.swp391_be.repository.ClassEnrollmentRepository;
+import com.swp391_be.repository.ClassRegistrationRepository;
 import com.swp391_be.repository.GymClassRepository;
 import com.swp391_be.repository.ScheduleRepository;
 import com.swp391_be.repository.UserRepository;
+import java.time.Clock;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
@@ -39,11 +43,15 @@ class GymClassServiceTest {
     @Mock
     private ClassEnrollmentRepository enrollments;
 
+    @Mock
+    private ClassRegistrationRepository registrations;
+
     private GymClassService service;
 
     @BeforeEach
     void setUp() {
-        service = new GymClassService(classes, schedules, users, enrollments);
+        service = new GymClassService(classes, schedules, users, enrollments, registrations,
+                Clock.fixed(Instant.parse("2026-09-29T00:00:00Z"), ZoneId.of("Asia/Ho_Chi_Minh")));
     }
 
     @Test
@@ -77,75 +85,45 @@ class GymClassServiceTest {
     }
 
     @Test
-    void cannotCreateClassWhenEndDateIsBeforeStartDate() {
+    void rejectsStartDateTodayOrEarlierOnCreate() {
         GymClass gymClass = new GymClass("Yoga", "Yoga", "Desc", 5, 3L);
-        gymClass.setStartDate(LocalDate.of(2026, 11, 10));
-        gymClass.setEndDate(LocalDate.of(2026, 11, 9));
+        gymClass.setStartDate(LocalDate.of(2026, 9, 29)); // hôm nay, phải từ ngày mai
 
         assertThatThrownBy(() -> service.create(gymClass))
                 .isInstanceOf(BusinessException.class)
-                .hasMessage("End date must not be before start date");
+                .hasMessage("Start date must be from tomorrow");
         verify(classes, never()).save(gymClass);
     }
 
     @Test
-    void createClassAllowsSameDayOrMissingDates() {
-        GymClass sameDay = new GymClass("Yoga", "Yoga", "Desc", 5, 3L);
-        sameDay.setStartDate(LocalDate.of(2026, 11, 10));
-        sameDay.setEndDate(LocalDate.of(2026, 11, 10));
-        GymClass noDates = new GymClass("Boxing", "Boxing", "Desc", 5, 3L);
-        when(users.existsByIdAndRole(3L, Role.COACH)).thenReturn(true);
-        when(classes.save(sameDay)).thenReturn(sameDay);
-        when(classes.save(noDates)).thenReturn(noDates);
+    void rejectsEarlyRegistrationInThePastOrClosingAfterStart() {
+        GymClass past = new GymClass("Yoga", "Yoga", "Desc", 5, 3L);
+        past.setRegistrationOpenAt(LocalDateTime.of(2026, 9, 29, 6, 0)); // 07:00 là hiện tại
+        past.setRegistrationCloseAt(LocalDateTime.of(2026, 9, 29, 23, 0));
+        assertThatThrownBy(() -> service.create(past))
+                .isInstanceOf(BusinessException.class)
+                .hasMessage("Registration open time must not be in the past");
 
-        assertThat(service.create(sameDay).getEndDate()).isEqualTo(LocalDate.of(2026, 11, 10));
-        assertThat(service.create(noDates).getStartDate()).isNull();
+        GymClass late = new GymClass("Yoga", "Yoga", "Desc", 5, 3L);
+        late.setStartDate(LocalDate.of(2026, 9, 30));
+        late.setRegistrationOpenAt(LocalDateTime.of(2026, 9, 29, 11, 0));
+        late.setRegistrationCloseAt(LocalDateTime.of(2026, 9, 30, 8, 0)); // sau 00:00 ngày bắt đầu
+        assertThatThrownBy(() -> service.create(late))
+                .isInstanceOf(BusinessException.class)
+                .hasMessage("Registration must close before the class start date");
     }
 
     @Test
-    void updateCopiesClassAndRegistrationDates() {
+    void updateKeepsPastStartDateWhenUnchanged() {
         GymClass existing = new GymClass("Yoga", "Yoga", "Desc", 5, 3L);
-        GymClass update = new GymClass("Yoga", "Yoga", "Desc", 5, 3L);
-        update.setStartDate(LocalDate.of(2026, 11, 1));
-        update.setEndDate(LocalDate.of(2026, 12, 31));
-        update.setRegistrationOpenAt(LocalDate.of(2026, 10, 1));
-        update.setRegistrationCloseAt(LocalDate.of(2026, 10, 15));
+        existing.setStartDate(LocalDate.of(2026, 9, 1));
+        GymClass update = new GymClass("Yoga 2", "Yoga", "Desc", 5, 3L);
+        update.setStartDate(LocalDate.of(2026, 9, 1)); // không đổi nên không bị coi là quá khứ
         when(classes.findById(20L)).thenReturn(Optional.of(existing));
         when(users.existsByIdAndRole(3L, Role.COACH)).thenReturn(true);
         when(classes.save(existing)).thenReturn(existing);
 
-        GymClass saved = service.update(20L, update);
-
-        assertThat(saved.getStartDate()).isEqualTo(LocalDate.of(2026, 11, 1));
-        assertThat(saved.getEndDate()).isEqualTo(LocalDate.of(2026, 12, 31));
-        assertThat(saved.getRegistrationOpenAt()).isEqualTo(LocalDate.of(2026, 10, 1));
-        assertThat(saved.getRegistrationCloseAt()).isEqualTo(LocalDate.of(2026, 10, 15));
-    }
-
-    @Test
-    void rejectsRegistrationCloseBeforeOpen() {
-        GymClass gymClass = new GymClass("Yoga", "Yoga", "Desc", 5, 3L);
-        gymClass.setRegistrationOpenAt(LocalDate.of(2026, 10, 2));
-        gymClass.setRegistrationCloseAt(LocalDate.of(2026, 10, 1));
-
-        assertThatThrownBy(() -> service.create(gymClass))
-                .isInstanceOf(BusinessException.class)
-                .hasMessage("Registration close date must not be before registration open date");
-        verify(classes, never()).save(gymClass);
-    }
-
-    @Test
-    void cannotUpdateClassWhenEndDateIsBeforeStartDate() {
-        GymClass existing = new GymClass("Yoga", "Yoga", "Desc", 5, 3L);
-        GymClass update = new GymClass("Yoga", "Yoga", "Desc", 5, 3L);
-        update.setStartDate(LocalDate.of(2026, 12, 1));
-        update.setEndDate(LocalDate.of(2026, 11, 1));
-        when(classes.findById(20L)).thenReturn(Optional.of(existing));
-
-        assertThatThrownBy(() -> service.update(20L, update))
-                .isInstanceOf(BusinessException.class)
-                .hasMessage("End date must not be before start date");
-        verify(classes, never()).save(existing);
+        assertThat(service.update(20L, update).getName()).isEqualTo("Yoga 2");
     }
 
     private Schedule schedule(Long id) {

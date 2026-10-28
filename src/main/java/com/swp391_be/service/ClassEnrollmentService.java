@@ -12,13 +12,13 @@ import com.swp391_be.repository.GymClassRepository;
 import com.swp391_be.repository.ScheduleRepository;
 import java.time.Clock;
 import java.time.Instant;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.swp391_be.repository.ClassRegistrationRepository;
 
 @Service
 public class ClassEnrollmentService {
@@ -28,16 +28,19 @@ public class ClassEnrollmentService {
     private final ClassEnrollmentRepository enrollments;
     private final MemberMembershipService membershipService;
     private final Clock clock;
+    private final ClassRegistrationRepository registrations;
 
     public ClassEnrollmentService(
             ScheduleRepository schedules,
             GymClassRepository classes,
             ClassEnrollmentRepository enrollments,
+            ClassRegistrationRepository registrations,
             MemberMembershipService membershipService,
             Clock clock) {
         this.schedules = schedules;
         this.classes = classes;
         this.enrollments = enrollments;
+        this.registrations = registrations;
         this.membershipService = membershipService;
         this.clock = clock;
     }
@@ -60,8 +63,14 @@ public class ClassEnrollmentService {
         }
         GymClass gymClass = classes.findById(schedule.getClassId())
                 .orElseThrow(() -> new ResourceNotFoundException("Class not found"));
-        if (!registrationAllowed(gymClass, LocalDate.now(clock))) {
+        if (!registrationAllowed(gymClass, LocalDateTime.now(clock))) {
             throw new BusinessException("Class registration is not open");
+        }
+        if (!gymClass.acceptsSessionEnrollmentAt(LocalDateTime.now(clock))) {
+            throw new BusinessException("Class session registration is not open yet");
+        }
+        if (!registrations.existsByMemberIdAndClassId(memberId, schedule.getClassId())) {
+            throw new BusinessException("Not registered in this class");
         }
         membershipService.requireValidForSession(memberId, schedule.getStartTime().toLocalDate());
         if (enrollments.existsByMemberIdAndScheduleId(memberId, scheduleId)) {
@@ -110,7 +119,10 @@ public class ClassEnrollmentService {
     private Optional<AvailableClassSessionResponse> availableResponse(Long memberId, Schedule schedule) {
         GymClass gymClass = classes.findById(schedule.getClassId())
                 .orElseThrow(() -> new ResourceNotFoundException("Class not found"));
-        if (!registrationAllowed(gymClass, LocalDate.now(clock))) {
+        if (!registrationAllowed(gymClass, LocalDateTime.now(clock))) {
+            return Optional.empty();
+        }
+        if (!gymClass.acceptsSessionEnrollmentAt(LocalDateTime.now(clock))) {
             return Optional.empty();
         }
         long registered = enrollments.countByScheduleId(schedule.getId());
@@ -133,9 +145,8 @@ public class ClassEnrollmentService {
                 enrollments.existsByMemberIdAndScheduleId(memberId, schedule.getId())));
     }
 
-    private boolean registrationAllowed(GymClass gymClass, LocalDate today) {
-        return (gymClass.getRegistrationOpenAt() == null || !today.isBefore(gymClass.getRegistrationOpenAt()))
-                && (gymClass.getEndDate() == null || !today.isAfter(gymClass.getEndDate()));
+    private boolean registrationAllowed(GymClass gymClass, LocalDateTime now) {
+        return gymClass.acceptsRegistrationAt(now);
     }
 
     private ClassEnrollmentResponse toResponse(ClassEnrollment enrollment, Schedule schedule, GymClass gymClass) {

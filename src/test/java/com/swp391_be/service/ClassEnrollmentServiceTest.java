@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -16,6 +17,7 @@ import com.swp391_be.entity.Schedule;
 import com.swp391_be.exception.BusinessException;
 import com.swp391_be.exception.ResourceNotFoundException;
 import com.swp391_be.repository.ClassEnrollmentRepository;
+import com.swp391_be.repository.ClassRegistrationRepository;
 import com.swp391_be.repository.GymClassRepository;
 import com.swp391_be.repository.ScheduleRepository;
 import java.time.Clock;
@@ -50,6 +52,9 @@ class ClassEnrollmentServiceTest {
     private ClassEnrollmentRepository enrollments;
 
     @Mock
+    private ClassRegistrationRepository registrations;
+
+    @Mock
     private MemberMembershipService membershipService;
 
     private ClassEnrollmentService service;
@@ -60,8 +65,10 @@ class ClassEnrollmentServiceTest {
                 schedules,
                 classes,
                 enrollments,
+                registrations,
                 membershipService,
                 Clock.fixed(NOW_INSTANT, ZONE));
+        lenient().when(registrations.existsByMemberIdAndClassId(any(), any())).thenReturn(true);
     }
 
     @Test
@@ -83,68 +90,12 @@ class ClassEnrollmentServiceTest {
     }
 
     @Test
-    void rejectsBeforeRegistrationOpensAndAfterClassEnds() {
-        GymClass gymClass = gymClass(2);
-        when(schedules.findByIdForUpdate(SCHEDULE_ID)).thenReturn(Optional.of(futureSchedule(SCHEDULE_ID, CLASS_ID)));
-        when(classes.findById(CLASS_ID)).thenReturn(Optional.of(gymClass));
-        gymClass.setRegistrationOpenAt(LocalDate.of(2026, 9, 30));
-
-        assertThatThrownBy(() -> service.enroll(MEMBER_ID, SCHEDULE_ID))
-                .isInstanceOf(BusinessException.class)
-                .hasMessage("Class registration is not open");
-
-        gymClass.setRegistrationOpenAt(null);
-        gymClass.setEndDate(LocalDate.of(2026, 9, 28));
-        assertThatThrownBy(() -> service.enroll(MEMBER_ID, SCHEDULE_ID))
-                .isInstanceOf(BusinessException.class)
-                .hasMessage("Class registration is not open");
-        verify(enrollments, never()).saveAndFlush(any());
-    }
-
-    @Test
-    void allowsRegistrationOnOpenAndEndDateAfterEarlyRegistrationCloses() {
-        GymClass gymClass = gymClass(2);
-        gymClass.setRegistrationOpenAt(LocalDate.of(2026, 9, 29));
-        gymClass.setRegistrationCloseAt(LocalDate.of(2026, 9, 29));
-        gymClass.setEndDate(LocalDate.of(2026, 9, 29));
-        when(schedules.findByIdForUpdate(SCHEDULE_ID)).thenReturn(Optional.of(futureSchedule(SCHEDULE_ID, CLASS_ID)));
-        when(classes.findById(CLASS_ID)).thenReturn(Optional.of(gymClass));
-        when(enrollments.saveAndFlush(any(ClassEnrollment.class))).thenAnswer(invocation -> invocation.getArgument(0));
-
-        assertThat(service.enroll(MEMBER_ID, SCHEDULE_ID).scheduleId()).isEqualTo(SCHEDULE_ID);
-        gymClass.setRegistrationOpenAt(LocalDate.of(2026, 9, 28));
-        gymClass.setRegistrationCloseAt(LocalDate.of(2026, 9, 28));
-        assertThat(service.enroll(MEMBER_ID, SCHEDULE_ID).scheduleId()).isEqualTo(SCHEDULE_ID);
-    }
-
-    @Test
-    void availableSessionsRespectRegistrationDates() {
-        GymClass gymClass = gymClass(2);
-        when(schedules.findByStartTimeAfterOrderByStartTime(any(LocalDateTime.class)))
-                .thenReturn(List.of(futureSchedule(SCHEDULE_ID, CLASS_ID)));
-        when(classes.findById(CLASS_ID)).thenReturn(Optional.of(gymClass));
-        gymClass.setRegistrationOpenAt(LocalDate.of(2026, 9, 30));
-        assertThat(service.getAvailableSessions(MEMBER_ID)).isEmpty();
-
-        gymClass.setRegistrationOpenAt(LocalDate.of(2026, 9, 29));
-        gymClass.setRegistrationCloseAt(LocalDate.of(2026, 9, 29));
-        gymClass.setEndDate(LocalDate.of(2026, 9, 29));
-        assertThat(service.getAvailableSessions(MEMBER_ID)).hasSize(1);
-
-        gymClass.setRegistrationOpenAt(LocalDate.of(2026, 9, 28));
-        gymClass.setRegistrationCloseAt(LocalDate.of(2026, 9, 28));
-        assertThat(service.getAvailableSessions(MEMBER_ID)).hasSize(1);
-
-        gymClass.setEndDate(LocalDate.of(2026, 9, 28));
-        assertThat(service.getAvailableSessions(MEMBER_ID)).isEmpty();
-    }
-
-    @Test
     void rejectsWhenMembershipExpired() {
         Schedule schedule = futureSchedule(SCHEDULE_ID, CLASS_ID);
         when(schedules.findByIdForUpdate(SCHEDULE_ID)).thenReturn(Optional.of(schedule));
         when(classes.findById(CLASS_ID)).thenReturn(Optional.of(gymClass(2)));
-        org.mockito.Mockito.doThrow(new BusinessException("Membership package is expired or does not cover this class session"))
+        org.mockito.Mockito
+                .doThrow(new BusinessException("Membership package is expired or does not cover this class session"))
                 .when(membershipService)
                 .requireValidForSession(MEMBER_ID, schedule.getStartTime().toLocalDate());
 
@@ -178,6 +129,32 @@ class ClassEnrollmentServiceTest {
         assertThatThrownBy(() -> service.enroll(MEMBER_ID, SCHEDULE_ID))
                 .isInstanceOf(BusinessException.class)
                 .hasMessage("Already enrolled in this class session");
+        verify(enrollments, never()).saveAndFlush(any());
+    }
+
+    @Test
+    void rejectsSessionEnrollmentDuringEarlyRegistration() {
+        GymClass gymClass = gymClass(2);
+        gymClass.setRegistrationOpenAt(LocalDate.of(2026, 9, 28).atStartOfDay());
+        gymClass.setRegistrationCloseAt(LocalDate.of(2026, 9, 29).atTime(23, 0)); // hiện tại 29/09 07:00, chưa đóng
+        when(schedules.findByIdForUpdate(SCHEDULE_ID)).thenReturn(Optional.of(futureSchedule(SCHEDULE_ID, CLASS_ID)));
+        when(classes.findById(CLASS_ID)).thenReturn(Optional.of(gymClass));
+
+        assertThatThrownBy(() -> service.enroll(MEMBER_ID, SCHEDULE_ID))
+                .isInstanceOf(BusinessException.class)
+                .hasMessage("Class session registration is not open yet");
+        verify(enrollments, never()).saveAndFlush(any());
+    }
+
+    @Test
+    void rejectsWhenNotRegisteredInClass() {
+        when(schedules.findByIdForUpdate(SCHEDULE_ID)).thenReturn(Optional.of(futureSchedule(SCHEDULE_ID, CLASS_ID)));
+        when(classes.findById(CLASS_ID)).thenReturn(Optional.of(gymClass(2)));
+        when(registrations.existsByMemberIdAndClassId(MEMBER_ID, CLASS_ID)).thenReturn(false);
+
+        assertThatThrownBy(() -> service.enroll(MEMBER_ID, SCHEDULE_ID))
+                .isInstanceOf(BusinessException.class)
+                .hasMessage("Not registered in this class");
         verify(enrollments, never()).saveAndFlush(any());
     }
 
@@ -271,7 +248,8 @@ class ClassEnrollmentServiceTest {
     void rejectsCancellationWhenMembershipExpired() {
         Schedule schedule = futureSchedule(SCHEDULE_ID, CLASS_ID);
         when(schedules.findByIdForUpdate(SCHEDULE_ID)).thenReturn(Optional.of(schedule));
-        org.mockito.Mockito.doThrow(new BusinessException("Membership package is expired or does not cover this class session"))
+        org.mockito.Mockito
+                .doThrow(new BusinessException("Membership package is expired or does not cover this class session"))
                 .when(membershipService)
                 .requireValidForSession(MEMBER_ID, schedule.getStartTime().toLocalDate());
 
