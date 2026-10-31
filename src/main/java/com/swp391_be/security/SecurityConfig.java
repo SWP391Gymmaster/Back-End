@@ -29,39 +29,51 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 public class SecurityConfig {
     private final JwtAuthenticationFilter jwtFilter;
     private final CustomUserDetailsService users;
+
     public SecurityConfig(JwtAuthenticationFilter jwtFilter, CustomUserDetailsService users) {
         this.jwtFilter = jwtFilter;
         this.users = users;
     }
+
     @Bean
-    public PasswordEncoder passwordEncoder() { return new BCryptPasswordEncoder(); }
+    public PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
+    }
+
     @Bean
     public DaoAuthenticationProvider authenticationProvider(PasswordEncoder encoder) {
         DaoAuthenticationProvider provider = new DaoAuthenticationProvider(users);
         provider.setPasswordEncoder(encoder);
         return provider;
     }
+
     @Bean
     public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
         return config.getAuthenticationManager();
     }
+
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http, DaoAuthenticationProvider provider) throws Exception {
+    public SecurityFilterChain securityFilterChain(HttpSecurity http, DaoAuthenticationProvider provider)
+            throws Exception {
         http.cors(Customizer.withDefaults())
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                        .requestMatchers("/error").permitAll()
                         .requestMatchers("/auth/register", "/auth/login", "/auth/verify-email",
-                                "/auth/resend-verification", "/api/test").permitAll()
+                                "/auth/resend-verification", "/api/test")
+                        .permitAll()
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         // Ai cũng xem được gói tập (trang chủ, trang đăng ký)
                         .requestMatchers(HttpMethod.GET, "/api/membership-packages/**").permitAll()
                         // Cho khách chưa đăng nhập xem danh sách lớp, lịch tập, phòng (B3)
-                        .requestMatchers(HttpMethod.GET, "/api/classes/**", "/api/schedules/**", "/api/rooms/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/classes/**", "/api/schedules/**", "/api/rooms/**")
+                        .permitAll()
                         .requestMatchers("/api/member/**").hasRole("MEMBER")
                         // Cổng thanh toán PayOS
-                        .requestMatchers("/api/payos/create-payment-link").hasAnyRole("MEMBER", "MANAGER", "RECEPTIONIST")
+                        .requestMatchers("/api/payos/create-payment-link")
+                        .hasAnyRole("MEMBER", "MANAGER", "RECEPTIONIST")
                         .requestMatchers("/api/payos/webhook", "/api/payos/callback", "/api/payos/cancel").permitAll()
                         .requestMatchers("/api/payos/mock-success/**").authenticated()
                         // Quản lý hóa đơn & thanh toán cho Receptionist và Manager
@@ -78,13 +90,14 @@ public class SecurityConfig {
                         .anyRequest().authenticated())
                 .authenticationProvider(provider)
                 .exceptionHandling(errors -> errors
-                        .authenticationEntryPoint((request, response, exception) ->
-                                writeError(response, 401, "Authentication required"))
-                        .accessDeniedHandler((request, response, exception) ->
-                                writeError(response, 403, "Access denied")))
+                        .authenticationEntryPoint(
+                                (request, response, exception) -> writeError(response, 401, "Authentication required"))
+                        .accessDeniedHandler(
+                                (request, response, exception) -> writeError(response, 403, "Access denied")))
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
         return http.build();
     }
+
     // Cho phép Front-End (Vite chạy ở localhost:5173) gọi API
     @Bean
     public CorsConfigurationSource corsConfigurationSource(

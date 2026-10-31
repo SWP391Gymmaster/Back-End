@@ -10,7 +10,8 @@ public record ScheduleResponse(
         Long roomId,
         LocalDateTime startTime,
         LocalDateTime endTime,
-        long registeredCount) {
+        long registeredCount,
+        String description) {
 
     public static ScheduleResponse of(Schedule schedule, long registeredCount) {
         return new ScheduleResponse(
@@ -20,6 +21,7 @@ public record ScheduleResponse(
                 schedule.getRoomId(),
                 schedule.getStartTime(),
                 schedule.getEndTime(),
-                registeredCount);
+                registeredCount,
+                schedule.getDescription());
     }
 }

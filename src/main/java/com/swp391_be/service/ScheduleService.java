@@ -71,6 +71,7 @@ public class ScheduleService {
         existing.setRoomId(schedule.getRoomId());
         existing.setStartTime(schedule.getStartTime());
         existing.setEndTime(schedule.getEndTime());
+        existing.setDescription(schedule.getDescription());
         return repository.save(existing);
     }
 
@@ -106,6 +107,7 @@ public class ScheduleService {
             throw new BusinessException("Class has no coach assigned");
         }
         classService.validateCoach(schedule.getCoachId());
+        classService.validateCoachTeaches(schedule.getCoachId(), gymClass);
 
         boolean coachBusy = repository
                 .findByCoachIdAndStartTimeLessThanAndEndTimeGreaterThan(
@@ -134,8 +136,7 @@ public class ScheduleService {
             "ZUMBA", java.util.Set.of(com.swp391_be.entity.RoomType.GROUP_X),
             "PILATES", java.util.Set.of(com.swp391_be.entity.RoomType.YOGA, com.swp391_be.entity.RoomType.GROUP_X),
             "GROUP_X", java.util.Set.of(com.swp391_be.entity.RoomType.GROUP_X),
-            "CYCLING", java.util.Set.of(com.swp391_be.entity.RoomType.CYCLING)
-    );
+            "CYCLING", java.util.Set.of(com.swp391_be.entity.RoomType.CYCLING));
 
     private void validateRoomTypeMatchSubject(Room room, GymClass gymClass) {
         if (room.getType() == null || gymClass.getSubject() == null || gymClass.getSubject().isBlank()) {
