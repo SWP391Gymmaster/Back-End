@@ -7,6 +7,7 @@ import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import java.util.List;
 
 public interface GymClassRepository extends JpaRepository<GymClass, Long> {
 
@@ -24,4 +25,6 @@ public interface GymClassRepository extends JpaRepository<GymClass, Long> {
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select c from GymClass c where c.id = :id")
     Optional<GymClass> findByIdForUpdate(@Param("id") Long id);
+
+    List<GymClass> findByCoachId(Long coachId);
 }

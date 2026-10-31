@@ -3,6 +3,7 @@ package com.swp391_be.entity;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 import java.time.LocalDateTime;
+import jakarta.validation.constraints.Size;
 
 @Entity
 @Table(name = "schedules")
@@ -85,5 +86,18 @@ public class Schedule {
 
     public void setEndTime(LocalDateTime endTime) {
         this.endTime = endTime;
+    }
+
+    // Lộ trình / mô tả nội dung của buổi học (không bắt buộc)
+    @Size(max = 1000)
+    @Column(length = 1000)
+    private String description;
+
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
     }
 }

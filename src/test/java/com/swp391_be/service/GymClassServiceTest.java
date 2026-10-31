@@ -2,6 +2,8 @@ package com.swp391_be.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -12,6 +14,7 @@ import com.swp391_be.entity.Schedule;
 import com.swp391_be.exception.BusinessException;
 import com.swp391_be.repository.ClassEnrollmentRepository;
 import com.swp391_be.repository.ClassRegistrationRepository;
+import com.swp391_be.repository.CoachSubjectRepository;
 import com.swp391_be.repository.GymClassRepository;
 import com.swp391_be.repository.ScheduleRepository;
 import com.swp391_be.repository.UserRepository;
@@ -48,10 +51,14 @@ class GymClassServiceTest {
 
     private GymClassService service;
 
+    @Mock
+    private CoachSubjectRepository coachSubjects;
+
     @BeforeEach
     void setUp() {
-        service = new GymClassService(classes, schedules, users, enrollments, registrations,
+        service = new GymClassService(classes, schedules, users, enrollments, registrations, coachSubjects,
                 Clock.fixed(Instant.parse("2026-09-29T00:00:00Z"), ZoneId.of("Asia/Ho_Chi_Minh")));
+        lenient().when(coachSubjects.existsByCoachIdAndSubjectKey(any(), any())).thenReturn(true);
     }
 
     @Test
@@ -138,5 +145,96 @@ class GymClassServiceTest {
         } catch (ReflectiveOperationException ex) {
             throw new AssertionError(ex);
         }
+    }
+
+    @Test
+    void rejectsCoachWhoDoesNotTeachSubject() {
+        GymClass gymClass = new GymClass("Yoga", "Yoga", "Desc", 5, 3L);
+        when(users.existsByIdAndRole(3L, Role.COACH)).thenReturn(true);
+        when(coachSubjects.existsByCoachIdAndSubjectKey(3L, "YOGA")).thenReturn(false);
+
+        assertThatThrownBy(() -> service.create(gymClass))
+                .isInstanceOf(BusinessException.class)
+                .hasMessage("Coach does not teach this subject");
+        verify(classes, never()).save(gymClass);
+    }
+
+    @Test
+    void rejectsSixthOverlappingClassForSameCoach() {
+        GymClass gymClass = classWithDates("New", LocalDate.of(2026, 11, 1), LocalDate.of(2027, 1, 31));
+        when(users.existsByIdAndRole(3L, Role.COACH)).thenReturn(true);
+        when(classes.findByCoachId(3L)).thenReturn(List.of(
+                classWithDates("A", LocalDate.of(2026, 10, 1), LocalDate.of(2026, 12, 31)),
+                classWithDates("B", LocalDate.of(2026, 10, 5), LocalDate.of(2026, 12, 31)),
+                classWithDates("C", LocalDate.of(2026, 10, 10), LocalDate.of(2026, 12, 31)),
+                classWithDates("D", LocalDate.of(2026, 10, 15), LocalDate.of(2026, 12, 31)),
+                classWithDates("E", LocalDate.of(2026, 10, 20), LocalDate.of(2026, 12, 31))));
+
+        assertThatThrownBy(() -> service.create(gymClass))
+                .isInstanceOf(BusinessException.class)
+                .hasMessage("Coach already has the maximum number of classes in this period");
+        verify(classes, never()).save(gymClass);
+    }
+
+    @Test
+    void closedClassesDoNotCountTowardsCoachLimit() {
+        GymClass gymClass = classWithDates("New", LocalDate.of(2026, 11, 1), LocalDate.of(2027, 1, 31));
+        when(users.existsByIdAndRole(3L, Role.COACH)).thenReturn(true);
+        when(classes.findByCoachId(3L)).thenReturn(List.of(
+                classWithDates("A", LocalDate.of(2026, 10, 1), LocalDate.of(2026, 12, 31)),
+                classWithDates("B", LocalDate.of(2026, 10, 5), LocalDate.of(2026, 12, 31)),
+                classWithDates("C", LocalDate.of(2026, 10, 10), LocalDate.of(2026, 12, 31)),
+                classWithDates("D", LocalDate.of(2026, 10, 15), LocalDate.of(2026, 12, 31)),
+                classWithDates("Old", LocalDate.of(2026, 8, 1), LocalDate.of(2026, 9, 1)), // đã đóng
+                classWithDates("Later", LocalDate.of(2027, 3, 1), LocalDate.of(2027, 5, 1)))); // không giao ngày
+        when(classes.save(gymClass)).thenReturn(gymClass);
+
+        assertThat(service.create(gymClass)).isSameAs(gymClass);
+    }
+
+    @Test
+    void rejectsSameCoachWithSameStartAndEndDates() {
+        GymClass gymClass = classWithDates("New", LocalDate.of(2026, 11, 1), LocalDate.of(2026, 12, 31));
+        when(users.existsByIdAndRole(3L, Role.COACH)).thenReturn(true);
+        when(classes.findByCoachId(3L)).thenReturn(List.of(
+                classWithDates("A", LocalDate.of(2026, 11, 1), LocalDate.of(2026, 12, 31))));
+
+        assertThatThrownBy(() -> service.create(gymClass))
+                .isInstanceOf(BusinessException.class)
+                .hasMessage("Coach already has a class with the same start and end dates");
+    }
+
+    @Test
+    void reopeningClosedClassClearsOldRegistrations() {
+        GymClass existing = classWithDates("Yoga", LocalDate.of(2026, 8, 1), LocalDate.of(2026, 9, 1)); // đã kết thúc
+        GymClass update = classWithDates("Yoga", LocalDate.of(2026, 10, 10), LocalDate.of(2026, 11, 10));
+        when(classes.findById(20L)).thenReturn(Optional.of(existing));
+        when(users.existsByIdAndRole(3L, Role.COACH)).thenReturn(true);
+        when(classes.save(existing)).thenReturn(existing);
+
+        service.update(20L, update);
+
+        verify(registrations).deleteAllByClassId(20L);
+        assertThat(existing.getStartDate()).isEqualTo(LocalDate.of(2026, 10, 10));
+    }
+
+    @Test
+    void editingRunningClassKeepsRegistrations() {
+        GymClass existing = classWithDates("Yoga", LocalDate.of(2026, 9, 1), LocalDate.of(2026, 12, 1));
+        GymClass update = classWithDates("Yoga 2", LocalDate.of(2026, 9, 1), LocalDate.of(2026, 12, 1));
+        when(classes.findById(20L)).thenReturn(Optional.of(existing));
+        when(users.existsByIdAndRole(3L, Role.COACH)).thenReturn(true);
+        when(classes.save(existing)).thenReturn(existing);
+
+        service.update(20L, update);
+
+        verify(registrations, never()).deleteAllByClassId(any());
+    }
+
+    private static GymClass classWithDates(String name, LocalDate start, LocalDate end) {
+        GymClass gymClass = new GymClass(name, "Yoga", "Desc", 5, 3L);
+        gymClass.setStartDate(start);
+        gymClass.setEndDate(end);
+        return gymClass;
     }
 }

@@ -5,6 +5,8 @@ import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.repository.query.Param;
 
 public interface ClassRegistrationRepository extends JpaRepository<ClassRegistration, Long> {
 
@@ -21,4 +23,8 @@ public interface ClassRegistrationRepository extends JpaRepository<ClassRegistra
     // [classId, số hội viên đã đăng ký lớp]
     @Query("select r.classId, count(r) from ClassRegistration r group by r.classId")
     List<Object[]> countRegistrationsPerClass();
+
+    @Modifying(flushAutomatically = true)
+    @Query("delete from ClassRegistration r where r.classId = :classId")
+    void deleteAllByClassId(@Param("classId") Long classId);
 }
